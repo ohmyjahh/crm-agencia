@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import ClientList from './components/clients/ClientList';
+import ClientForm from './components/clients/ClientForm';
 import { CircularProgress, Box } from '@mui/material';
 
 const theme = createTheme({
@@ -19,6 +21,13 @@ const theme = createTheme({
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [pageData, setPageData] = useState({});
+
+  const handleNavigate = (page, data = {}) => {
+    setCurrentPage(page);
+    setPageData(data);
+  };
 
   if (loading) {
     return (
@@ -33,7 +42,40 @@ function AppContent() {
     );
   }
 
-  return user ? <Dashboard /> : <Login />;
+  if (!user) {
+    return <Login />;
+  }
+
+  // Renderizar página baseada no estado atual
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'clients':
+        return <ClientList onNavigate={handleNavigate} />;
+      
+      case 'client-form':
+        return (
+          <ClientForm
+            clientId={pageData.clientId}
+            onNavigate={handleNavigate}
+            onBack={() => handleNavigate('clients')}
+          />
+        );
+      
+      case 'client-details':
+        return (
+          <Box sx={{ p: 3 }}>
+            <h2>Detalhes do Cliente (Em desenvolvimento)</h2>
+            <button onClick={() => handleNavigate('clients')}>Voltar</button>
+          </Box>
+        );
+      
+      case 'dashboard':
+      default:
+        return <Dashboard onNavigate={handleNavigate} />;
+    }
+  };
+
+  return renderPage();
 }
 
 function App() {

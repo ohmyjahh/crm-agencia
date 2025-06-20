@@ -21,7 +21,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
-const Dashboard = () => {
+const Dashboard = ({ onNavigate }) => {
   const { user, logout, isAdmin } = useAuth();
 
   const handleLogout = () => {
@@ -60,10 +60,36 @@ const Dashboard = () => {
   ];
 
   const quickActions = [
-    { title: 'Novo Cliente', description: 'Cadastrar novo cliente', color: 'primary' },
-    { title: 'Nova Tarefa', description: 'Criar nova tarefa', color: 'secondary' },
-    { title: 'Registro Financeiro', description: 'Adicionar entrada/saída', color: 'success' },
-    ...(isAdmin ? [{ title: 'Novo Usuário', description: 'Cadastrar funcionário', color: 'info' }] : []),
+    { 
+      title: 'Novo Cliente', 
+      description: 'Cadastrar novo cliente', 
+      color: 'primary',
+      action: () => onNavigate('client-form')
+    },
+    { 
+      title: 'Ver Clientes', 
+      description: 'Gerenciar clientes', 
+      color: 'primary',
+      action: () => onNavigate('clients')
+    },
+    { 
+      title: 'Nova Tarefa', 
+      description: 'Criar nova tarefa', 
+      color: 'secondary',
+      action: () => alert('Funcionalidade em desenvolvimento')
+    },
+    { 
+      title: 'Registro Financeiro', 
+      description: 'Adicionar entrada/saída', 
+      color: 'success',
+      action: () => alert('Funcionalidade em desenvolvimento')
+    },
+    ...(isAdmin ? [{ 
+      title: 'Novo Usuário', 
+      description: 'Cadastrar funcionário', 
+      color: 'info',
+      action: () => alert('Funcionalidade em desenvolvimento')
+    }] : []),
   ];
 
   return (
@@ -153,7 +179,11 @@ const Dashboard = () => {
               <Grid container spacing={2}>
                 {quickActions.map((action, index) => (
                   <Grid item xs={12} sm={6} key={index}>
-                    <Card variant="outlined" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 2 } }}>
+                    <Card 
+                      variant="outlined" 
+                      sx={{ cursor: 'pointer', '&:hover': { boxShadow: 2 } }}
+                      onClick={action.action}
+                    >
                       <CardContent>
                         <Typography variant="h6" color={`${action.color}.main`}>
                           {action.title}

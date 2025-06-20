@@ -53,6 +53,27 @@ export const authAPI = {
     api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
+// Client endpoints
+export const clientAPI = {
+  getClients: (params = {}) => 
+    api.get('/clients', { params }),
+  
+  getClientById: (id) => 
+    api.get(`/clients/${id}`),
+  
+  createClient: (clientData) => 
+    api.post('/clients', clientData),
+  
+  updateClient: (id, clientData) => 
+    api.put(`/clients/${id}`, clientData),
+  
+  deleteClient: (id) => 
+    api.delete(`/clients/${id}`),
+  
+  activateClient: (id) => 
+    api.patch(`/clients/${id}/activate`)
+};
+
 // Health check
 export const healthCheck = () => 
   api.get('/health');
