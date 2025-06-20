@@ -76,7 +76,13 @@ const Dashboard = ({ onNavigate }) => {
       title: 'Nova Tarefa', 
       description: 'Criar nova tarefa', 
       color: 'secondary',
-      action: () => alert('Funcionalidade em desenvolvimento')
+      action: () => onNavigate('task-form')
+    },
+    { 
+      title: 'Ver Tarefas', 
+      description: 'Gerenciar tarefas', 
+      color: 'secondary',
+      action: () => onNavigate('tasks')
     },
     { 
       title: 'Registro Financeiro', 

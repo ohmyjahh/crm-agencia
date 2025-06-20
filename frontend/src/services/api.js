@@ -74,6 +74,30 @@ export const clientAPI = {
     api.patch(`/clients/${id}/activate`)
 };
 
+// Task endpoints
+export const taskAPI = {
+  getTasks: (params = {}) => 
+    api.get('/tasks', { params }),
+  
+  getTaskById: (id) => 
+    api.get(`/tasks/${id}`),
+  
+  createTask: (taskData) => 
+    api.post('/tasks', taskData),
+  
+  updateTask: (id, taskData) => 
+    api.put(`/tasks/${id}`, taskData),
+  
+  deleteTask: (id) => 
+    api.delete(`/tasks/${id}`),
+  
+  getUsers: () => 
+    api.get('/tasks/users'),
+  
+  getTaskStats: () => 
+    api.get('/tasks/stats')
+};
+
 // Health check
 export const healthCheck = () => 
   api.get('/health');

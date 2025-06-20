@@ -6,6 +6,8 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ClientList from './components/clients/ClientList';
 import ClientForm from './components/clients/ClientForm';
+import TaskList from './components/tasks/TaskList';
+import TaskForm from './components/tasks/TaskForm';
 import { CircularProgress, Box } from '@mui/material';
 
 const theme = createTheme({
@@ -66,6 +68,26 @@ function AppContent() {
           <Box sx={{ p: 3 }}>
             <h2>Detalhes do Cliente (Em desenvolvimento)</h2>
             <button onClick={() => handleNavigate('clients')}>Voltar</button>
+          </Box>
+        );
+      
+      case 'tasks':
+        return <TaskList onNavigate={handleNavigate} />;
+      
+      case 'task-form':
+        return (
+          <TaskForm
+            taskId={pageData.taskId}
+            onNavigate={handleNavigate}
+            onBack={() => handleNavigate('tasks')}
+          />
+        );
+      
+      case 'task-details':
+        return (
+          <Box sx={{ p: 3 }}>
+            <h2>Detalhes da Tarefa (Em desenvolvimento)</h2>
+            <button onClick={() => handleNavigate('tasks')}>Voltar</button>
           </Box>
         );
       
