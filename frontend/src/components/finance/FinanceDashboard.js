@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
-  Paper,
   Grid,
   Card,
   CardContent,
   IconButton,
   Chip,
-  Tab,
-  Tabs,
   List,
   ListItem,
   ListItemText,
@@ -28,6 +24,8 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Stack,
+  Avatar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,6 +39,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { financeAPI, clientAPI } from '../../services/api';
+import MainLayout from '../Layout/MainLayout';
 
 const FinanceDashboard = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
@@ -193,83 +192,92 @@ const FinanceDashboard = ({ onNavigate }) => {
     );
   }
 
+  const breadcrumbs = [
+    { label: 'Financeiro', onClick: () => onNavigate('finance') }
+  ];
+
+  const headerActions = (
+    <Stack direction="row" spacing={1}>
+      <Button
+        variant="outlined"
+        startIcon={<UploadIcon />}
+        onClick={() => setDREModal(true)}
+        sx={{ display: { xs: 'none', sm: 'flex' } }}
+      >
+        DRE com IA
+      </Button>
+      
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => setTransactionModal(true)}
+      >
+        Nova Transação
+      </Button>
+    </Stack>
+  );
+
   return (
-    <Container maxWidth="lg">
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Financeiro
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gestão financeira com IA para DRE
-          </Typography>
-        </Box>
-        
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<UploadIcon />}
-            onClick={() => setDREModal(true)}
-          >
-            DRE com IA
-          </Button>
-          
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setTransactionModal(true)}
-          >
-            Nova Transação
-          </Button>
-        </Box>
-      </Box>
+    <MainLayout
+      title="Dashboard Financeiro"
+      breadcrumbs={breadcrumbs}
+      currentPage="finance"
+      onNavigate={onNavigate}
+      headerActions={headerActions}
+    >
 
       {/* Filtro de Período */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item>
-            <Typography variant="body2">Período:</Typography>
-          </Grid>
-          <Grid item>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Mês</InputLabel>
-              <Select
-                value={selectedPeriod.month}
-                label="Mês"
-                onChange={(e) => setSelectedPeriod(prev => ({ ...prev, month: e.target.value }))}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Período de Análise
+          </Typography>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Mês</InputLabel>
+                <Select
+                  value={selectedPeriod.month}
+                  label="Mês"
+                  onChange={(e) => setSelectedPeriod(prev => ({ ...prev, month: e.target.value }))}
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <MenuItem key={i + 1} value={i + 1}>
+                      {new Date(2023, i).toLocaleDateString('pt-BR', { month: 'long' })}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Ano</InputLabel>
+                <Select
+                  value={selectedPeriod.year}
+                  label="Ano"
+                  onChange={(e) => setSelectedPeriod(prev => ({ ...prev, year: e.target.value }))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <MenuItem key={2023 + i} value={2023 + i}>
+                      {2023 + i}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={loadData}
+                fullWidth
               >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <MenuItem key={i + 1} value={i + 1}>
-                    {new Date(2023, i).toLocaleDateString('pt-BR', { month: 'long' })}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                Atualizar
+              </Button>
+            </Grid>
           </Grid>
-          <Grid item>
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-              <InputLabel>Ano</InputLabel>
-              <Select
-                value={selectedPeriod.year}
-                label="Ano"
-                onChange={(e) => setSelectedPeriod(prev => ({ ...prev, year: e.target.value }))}
-              >
-                {Array.from({ length: 5 }, (_, i) => (
-                  <MenuItem key={2023 + i} value={2023 + i}>
-                    {2023 + i}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item>
-            <IconButton onClick={loadData} size="small">
-              <RefreshIcon />
-            </IconButton>
-          </Grid>
-        </Grid>
-      </Paper>
+        </Box>
+      </Card>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -280,16 +288,18 @@ const FinanceDashboard = ({ onNavigate }) => {
       {/* Cards de Resumo */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <TrendingUpIcon sx={{ fontSize: 40, color: 'success.main' }} />
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'success.light', width: 48, height: 48 }}>
+                  <TrendingUpIcon color="success" />
+                </Avatar>
                 <Box>
-                  <Typography variant="h5" color="success.main">
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
                     {formatCurrency(stats?.summary?.receitas)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Receitas
+                    Receitas do Período
                   </Typography>
                 </Box>
               </Box>
@@ -298,16 +308,18 @@ const FinanceDashboard = ({ onNavigate }) => {
         </Grid>
 
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <TrendingDownIcon sx={{ fontSize: 40, color: 'error.main' }} />
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'error.light', width: 48, height: 48 }}>
+                  <TrendingDownIcon color="error" />
+                </Avatar>
                 <Box>
-                  <Typography variant="h5" color="error.main">
+                  <Typography variant="h5" fontWeight="bold" color="error.main">
                     {formatCurrency(stats?.summary?.despesas)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Despesas
+                    Despesas do Período
                   </Typography>
                 </Box>
               </Box>
@@ -316,19 +328,26 @@ const FinanceDashboard = ({ onNavigate }) => {
         </Grid>
 
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <AccountBalanceIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ 
+                  bgcolor: stats?.summary?.saldo >= 0 ? 'success.light' : 'error.light', 
+                  width: 48, 
+                  height: 48 
+                }}>
+                  <AccountBalanceIcon color={stats?.summary?.saldo >= 0 ? 'success' : 'error'} />
+                </Avatar>
                 <Box>
                   <Typography 
                     variant="h5" 
+                    fontWeight="bold"
                     color={stats?.summary?.saldo >= 0 ? 'success.main' : 'error.main'}
                   >
                     {formatCurrency(stats?.summary?.saldo)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Saldo
+                    Saldo do Período
                   </Typography>
                 </Box>
               </Box>
@@ -337,16 +356,18 @@ const FinanceDashboard = ({ onNavigate }) => {
         </Grid>
 
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <ReportIcon sx={{ fontSize: 40, color: 'info.main' }} />
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'info.light', width: 48, height: 48 }}>
+                  <ReportIcon color="info" />
+                </Avatar>
                 <Box>
-                  <Typography variant="h5" color="info.main">
+                  <Typography variant="h5" fontWeight="bold" color="info.main">
                     {stats?.summary?.total_transactions || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Transações
+                    Total de Transações
                   </Typography>
                 </Box>
               </Box>
@@ -359,13 +380,18 @@ const FinanceDashboard = ({ onNavigate }) => {
       <Grid container spacing={3}>
         {/* Transações Recentes */}
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Transações Recentes</Typography>
-              <Button size="small" onClick={() => onNavigate('finance-transactions')}>
-                Ver Todas
-              </Button>
-            </Box>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" fontWeight="bold">Transações Recentes</Typography>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={() => onNavigate('finance-transactions')}
+                >
+                  Ver Todas
+                </Button>
+              </Box>
             
             <List>
               {recentTransactions.length === 0 ? (
@@ -413,15 +439,17 @@ const FinanceDashboard = ({ onNavigate }) => {
                 ))
               )}
             </List>
-          </Paper>
+            </CardContent>
+          </Card>
         </Grid>
 
         {/* Resumo por Categoria */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Por Categoria
-            </Typography>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                Por Categoria
+              </Typography>
             
             <List dense>
               {stats?.by_category?.slice(0, 8).map((category) => (
@@ -442,7 +470,8 @@ const FinanceDashboard = ({ onNavigate }) => {
                 </ListItem>
               ))}
             </List>
-          </Paper>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 
@@ -619,7 +648,7 @@ const FinanceDashboard = ({ onNavigate }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </MainLayout>
   );
 };
 

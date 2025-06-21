@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -15,7 +14,6 @@ import {
   Chip,
   TextField,
   InputAdornment,
-  Fab,
   Menu,
   MenuItem,
   Dialog,
@@ -26,6 +24,10 @@ import {
   Pagination,
   CircularProgress,
   Alert,
+  Card,
+  Avatar,
+  Stack,
+  Grid,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -37,9 +39,13 @@ import {
   Person as PersonIcon,
   Delete as DeleteIcon,
   Restore as RestoreIcon,
+  FilterList as FilterIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { clientAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import MainLayout from '../Layout/MainLayout';
 
 const ClientList = ({ onNavigate }) => {
   const [clients, setClients] = useState([]);
@@ -70,7 +76,7 @@ const ClientList = ({ onNavigate }) => {
         page,
         limit: 10,
         search: searchTerm.trim() || undefined,
-        active: 'all' // Mostrar todos para admin
+        active: 'all'
       };
 
       const response = await clientAPI.getClients(params);
@@ -163,55 +169,107 @@ const ClientList = ({ onNavigate }) => {
     return document;
   };
 
-  if (loading && clients.length === 0) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const breadcrumbs = [
+    { label: 'Clientes', onClick: () => onNavigate('clients') }
+  ];
+
+  const headerActions = (
+    <Stack direction="row" spacing={1}>
+      <Button
+        variant="outlined"
+        startIcon={<FilterIcon />}
+        onClick={() => alert('Filtros em breve')}
+        sx={{ display: { xs: 'none', sm: 'flex' } }}
+      >
+        Filtros
+      </Button>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => onNavigate('client-form')}
+      >
+        Novo Cliente
+      </Button>
+    </Stack>
+  );
 
   return (
-    <Container maxWidth="lg">
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Clientes
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gerencie os clientes da sua agência
-          </Typography>
-        </Box>
+    <MainLayout
+      title="Gestão de Clientes"
+      breadcrumbs={breadcrumbs}
+      currentPage="clients"
+      onNavigate={onNavigate}
+      headerActions={headerActions}
+    >
+      {/* Stats Summary */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'primary.light' }}>
+                <BusinessIcon color="primary" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {pagination.total_records}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total de Clientes
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
         
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => onNavigate('client-form')}
-          size="large"
-        >
-          Novo Cliente
-        </Button>
-      </Box>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'success.light' }}>
+                <PersonIcon color="success" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {clients.filter(c => c.is_active).length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Clientes Ativos
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
+      </Grid>
 
-      {/* Busca */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box component="form" onSubmit={handleSearchSubmit}>
-          <TextField
-            fullWidth
-            placeholder="Buscar por nome, email ou documento..."
-            value={search}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+      {/* Search */}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Buscar Clientes
+          </Typography>
+          <Box component="form" onSubmit={handleSearchSubmit}>
+            <TextField
+              fullWidth
+              placeholder="Buscar por nome, email, telefone ou documento..."
+              value={search}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Button type="submit" variant="contained" size="small">
+                      Buscar
+                    </Button>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
         </Box>
-      </Paper>
+      </Card>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -219,116 +277,122 @@ const ClientList = ({ onNavigate }) => {
         </Alert>
       )}
 
-      {/* Tabela */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Documento</TableCell>
-              <TableCell>Contato</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Criado em</TableCell>
-              <TableCell align="center">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {clients.length === 0 ? (
+      {/* Clients Table */}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-                  </Typography>
-                </TableCell>
+                <TableCell>Cliente</TableCell>
+                <TableCell>Contato</TableCell>
+                <TableCell>Documento</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="center">Ações</TableCell>
               </TableRow>
-            ) : (
-              clients.map((client) => (
-                <TableRow key={client.id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {client.document_type === 'CNPJ' ? (
-                        <BusinessIcon color="primary" />
-                      ) : (
-                        <PersonIcon color="primary" />
-                      )}
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {client.name}
-                        </Typography>
-                        {client.email && (
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : clients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Nenhum cliente encontrado
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                clients.map((client) => (
+                  <TableRow key={client.id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{ bgcolor: 'primary.light' }}>
+                          {client.document_type === 'CNPJ' ? (
+                            <BusinessIcon color="primary" />
+                          ) : (
+                            <PersonIcon color="primary" />
+                          )}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" fontWeight="medium">
+                            {client.name}
+                          </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {client.email}
+                            {client.document_type} • {client.city || 'Cidade não informada'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Box>
+                        {client.email && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                            <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="body2">{client.email}</Typography>
+                          </Box>
+                        )}
+                        {client.phone && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="body2">{client.phone}</Typography>
+                          </Box>
+                        )}
+                        {!client.email && !client.phone && (
+                          <Typography variant="body2" color="text.secondary">
+                            Sem contato
                           </Typography>
                         )}
                       </Box>
-                    </Box>
-                  </TableCell>
-                  
-                  <TableCell>
-                    {client.document ? (
-                      <Box>
-                        <Typography variant="body2">
-                          {formatDocument(client.document, client.document_type)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {client.document_type}
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">-</Typography>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell>
-                    {client.phone ? (
-                      <Typography variant="body2">{client.phone}</Typography>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">-</Typography>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Chip
-                      label={client.is_active ? 'Ativo' : 'Inativo'}
-                      color={client.is_active ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Typography variant="body2">
-                      {new Date(client.created_at).toLocaleDateString('pt-BR')}
-                    </Typography>
-                  </TableCell>
-                  
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, client)}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDocument(client.document, client.document_type)}
+                      </Typography>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Chip
+                        label={client.is_active ? 'Ativo' : 'Inativo'}
+                        color={client.is_active ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    
+                    <TableCell align="center">
+                      <IconButton
+                        onClick={(e) => handleMenuOpen(e, client)}
+                        size="small"
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Paginação */}
-      {pagination.total_pages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination
-            count={pagination.total_pages}
-            page={pagination.current_page}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
-      )}
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <Pagination
+              count={pagination.total_pages}
+              page={pagination.current_page}
+              onChange={handlePageChange}
+              color="primary"
+            />
+          </Box>
+        )}
+      </Card>
 
-      {/* Menu de ações */}
+      {/* Action Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -343,7 +407,7 @@ const ClientList = ({ onNavigate }) => {
           Editar
         </MenuItem>
         {isAdmin && (
-          <MenuItem onClick={handleDeleteOpen}>
+          <MenuItem onClick={handleDeleteOpen} sx={{ color: 'error.main' }}>
             {selectedClient?.is_active ? (
               <>
                 <DeleteIcon sx={{ mr: 1 }} />
@@ -352,59 +416,38 @@ const ClientList = ({ onNavigate }) => {
             ) : (
               <>
                 <RestoreIcon sx={{ mr: 1 }} />
-                Reativar
+                Ativar
               </>
             )}
           </MenuItem>
         )}
       </Menu>
 
-      {/* Dialog de confirmação */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog} onClose={handleDeleteClose}>
         <DialogTitle>
-          {selectedClient?.is_active ? 'Desativar Cliente' : 'Reativar Cliente'}
+          {selectedClient?.is_active ? 'Desativar Cliente' : 'Ativar Cliente'}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {selectedClient?.is_active
+            {selectedClient?.is_active 
               ? `Tem certeza que deseja desativar o cliente "${selectedClient?.name}"?`
-              : `Tem certeza que deseja reativar o cliente "${selectedClient?.name}"?`
+              : `Tem certeza que deseja ativar o cliente "${selectedClient?.name}"?`
             }
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDeleteClose}>Cancelar</Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            color={selectedClient?.is_active ? 'error' : 'primary'}
-            variant="contained"
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color={selectedClient?.is_active ? 'error' : 'success'}
             disabled={actionLoading}
           >
             {actionLoading ? <CircularProgress size={20} /> : 'Confirmar'}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Loading overlay */}
-      {loading && clients.length > 0 && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: 'rgba(255,255,255,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
-    </Container>
+    </MainLayout>
   );
 };
 

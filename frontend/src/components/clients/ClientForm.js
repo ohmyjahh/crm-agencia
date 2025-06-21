@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
-  Paper,
   Grid,
   TextField,
   MenuItem,
   CircularProgress,
   Alert,
-  Breadcrumbs,
-  Link,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   Save as SaveIcon,
-  ArrowBack as ArrowBackIcon,
   Business as BusinessIcon,
   Person as PersonIcon,
 } from '@mui/icons-material';
 import { clientAPI } from '../../services/api';
+import MainLayout from '../Layout/MainLayout';
 
 const ClientForm = ({ clientId, onNavigate, onBack }) => {
   const [formData, setFormData] = useState({
@@ -42,7 +40,6 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
 
   const isEditing = Boolean(clientId);
 
-  // Carregar dados do cliente se for edição
   useEffect(() => {
     if (isEditing) {
       loadClient();
@@ -84,24 +81,18 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
       [name]: value
     }));
     
-    // Limpar mensagens quando usuário digitar
     if (error) setError(null);
     if (success) setSuccess(false);
   };
 
   const formatDocument = (value, type) => {
-    // Remove tudo que não é número
     const numbers = value.replace(/\D/g, '');
     
     if (type === 'CPF') {
-      // Máximo 11 dígitos
       const truncated = numbers.substring(0, 11);
-      // Aplica máscara CPF: 000.000.000-00
       return truncated.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     } else if (type === 'CNPJ') {
-      // Máximo 14 dígitos
       const truncated = numbers.substring(0, 14);
-      // Aplica máscara CNPJ: 00.000.000/0000-00
       return truncated.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
     
@@ -123,7 +114,7 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
     setFormData(prev => ({
       ...prev,
       document_type: value,
-      document: '' // Limpa documento ao trocar tipo
+      document: ''
     }));
   };
 
@@ -166,88 +157,79 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
       setSaving(true);
       setError(null);
 
-      // Preparar dados (remover campos vazios)
-      const dataToSend = {};
+      // Limpar dados vazios
+      const cleanData = {};
       Object.keys(formData).forEach(key => {
-        const value = formData[key]?.trim();
-        if (value) {
-          dataToSend[key] = value;
+        if (formData[key]?.trim()) {
+          cleanData[key] = formData[key].trim();
         }
       });
 
-      let response;
       if (isEditing) {
-        response = await clientAPI.updateClient(clientId, dataToSend);
+        await clientAPI.updateClient(clientId, cleanData);
+        setSuccess('Cliente atualizado com sucesso!');
       } else {
-        response = await clientAPI.createClient(dataToSend);
+        await clientAPI.createClient(cleanData);
+        setSuccess('Cliente criado com sucesso!');
       }
 
-      setSuccess(true);
-      
-      // Redirect após 2 segundos
       setTimeout(() => {
         onNavigate('clients');
-      }, 2000);
+      }, 1500);
 
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Erro ao salvar cliente';
-      setError(errorMessage);
+      setError(error.response?.data?.error || 'Erro ao salvar cliente');
       console.error('Erro ao salvar cliente:', error);
     } finally {
       setSaving(false);
     }
   };
 
+  const breadcrumbs = [
+    { label: 'Clientes', onClick: () => onNavigate('clients') },
+    { label: isEditing ? 'Editar Cliente' : 'Novo Cliente' }
+  ];
+
+  const headerActions = (
+    <Button
+      variant="contained"
+      startIcon={<SaveIcon />}
+      onClick={handleSubmit}
+      disabled={saving}
+      form="client-form"
+      type="submit"
+    >
+      {saving ? <CircularProgress size={20} /> : (isEditing ? 'Atualizar' : 'Salvar')}
+    </Button>
+  );
+
   if (loading) {
     return (
-      <Container maxWidth="md">
+      <MainLayout
+        title={isEditing ? 'Editar Cliente' : 'Novo Cliente'}
+        breadcrumbs={breadcrumbs}
+        currentPage="client-form"
+        onNavigate={onNavigate}
+        showBackButton={true}
+        onBack={onBack}
+      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </MainLayout>
     );
   }
 
   return (
-    <Container maxWidth="md">
-      {/* Breadcrumbs */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => onNavigate('clients')}
-            sx={{ textDecoration: 'none' }}
-          >
-            Clientes
-          </Link>
-          <Typography variant="body2" color="text.primary">
-            {isEditing ? 'Editar Cliente' : 'Novo Cliente'}
-          </Typography>
-        </Breadcrumbs>
-      </Box>
-
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => onNavigate('clients')}
-          variant="outlined"
-        >
-          Voltar
-        </Button>
-        
-        <Box>
-          <Typography variant="h4" component="h1">
-            {isEditing ? 'Editar Cliente' : 'Novo Cliente'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {isEditing ? 'Atualize as informações do cliente' : 'Cadastre um novo cliente'}
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Mensagens */}
+    <MainLayout
+      title={isEditing ? 'Editar Cliente' : 'Novo Cliente'}
+      breadcrumbs={breadcrumbs}
+      currentPage="client-form"
+      onNavigate={onNavigate}
+      showBackButton={true}
+      onBack={onBack}
+      headerActions={headerActions}
+    >
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
@@ -256,189 +238,161 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
-          Cliente {isEditing ? 'atualizado' : 'cadastrado'} com sucesso! Redirecionando...
+          {success}
         </Alert>
       )}
 
-      {/* Formulário */}
-      <Paper sx={{ p: 3 }}>
-        <Box component="form" onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Nome */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nome *"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                disabled={saving}
-              />
-            </Grid>
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box component="form" id="client-form" onSubmit={handleSubmit}>
+            <Grid container spacing={3}>
+              {/* Informações Básicas */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PersonIcon />
+                  Informações Básicas
+                </Typography>
+              </Grid>
 
-            {/* Email e Telefone */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={saving}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Telefone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                disabled={saving}
-                placeholder="(11) 99999-9999"
-              />
-            </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Nome *"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
 
-            {/* Tipo de Documento */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                select
-                label="Tipo de Documento"
-                name="document_type"
-                value={formData.document_type}
-                onChange={handleDocumentTypeChange}
-                disabled={saving}
-              >
-                <MenuItem value="">
-                  <em>Selecione</em>
-                </MenuItem>
-                <MenuItem value="CPF">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PersonIcon fontSize="small" />
-                    CPF
-                  </Box>
-                </MenuItem>
-                <MenuItem value="CNPJ">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <BusinessIcon fontSize="small" />
-                    CNPJ
-                  </Box>
-                </MenuItem>
-              </TextField>
-            </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </Grid>
 
-            {/* Documento */}
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                label={
-                  formData.document_type === 'CPF' ? 'CPF' :
-                  formData.document_type === 'CNPJ' ? 'CNPJ' : 'Documento'
-                }
-                name="document"
-                value={formData.document}
-                onChange={handleDocumentChange}
-                disabled={saving || !formData.document_type}
-                placeholder={
-                  formData.document_type === 'CPF' ? '000.000.000-00' :
-                  formData.document_type === 'CNPJ' ? '00.000.000/0000-00' : ''
-                }
-              />
-            </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Telefone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </Grid>
 
-            {/* Endereço */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Endereço"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                disabled={saving}
-                multiline
-                rows={2}
-              />
-            </Grid>
+              {/* Documentos */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                  <BusinessIcon />
+                  Documentação
+                </Typography>
+              </Grid>
 
-            {/* Cidade, Estado e CEP */}
-            <Grid item xs={12} md={5}>
-              <TextField
-                fullWidth
-                label="Cidade"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                disabled={saving}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Estado"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                disabled={saving}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="CEP"
-                name="zip_code"
-                value={formData.zip_code}
-                onChange={handleChange}
-                disabled={saving}
-                placeholder="00000-000"
-              />
-            </Grid>
-
-            {/* Observações */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Observações"
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                disabled={saving}
-                multiline
-                rows={4}
-                placeholder="Informações adicionais sobre o cliente..."
-              />
-            </Grid>
-
-            {/* Botões */}
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => onNavigate('clients')}
-                  disabled={saving}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Tipo de Documento"
+                  name="document_type"
+                  value={formData.document_type}
+                  onChange={handleDocumentTypeChange}
                 >
-                  Cancelar
-                </Button>
-                
-                <Button
-                  type="submit"
-                  variant="contained"
-                  startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                  disabled={saving}
-                >
-                  {saving ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Cadastrar')}
-                </Button>
-              </Box>
+                  <MenuItem value="">Selecione</MenuItem>
+                  <MenuItem value="CPF">CPF</MenuItem>
+                  <MenuItem value="CNPJ">CNPJ</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  label={
+                    formData.document_type === 'CPF' ? 'CPF' :
+                    formData.document_type === 'CNPJ' ? 'CNPJ' : 'Documento'
+                  }
+                  name="document"
+                  value={formData.document}
+                  onChange={handleDocumentChange}
+                  disabled={!formData.document_type}
+                  placeholder={
+                    formData.document_type === 'CPF' ? '000.000.000-00' :
+                    formData.document_type === 'CNPJ' ? '00.000.000/0000-00' : ''
+                  }
+                />
+              </Grid>
+
+              {/* Endereço */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Endereço
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Endereço"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  multiline
+                  rows={2}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Cidade"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={3}>
+                <TextField
+                  fullWidth
+                  label="Estado"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={3}>
+                <TextField
+                  fullWidth
+                  label="CEP"
+                  name="zip_code"
+                  value={formData.zip_code}
+                  onChange={handleChange}
+                />
+              </Grid>
+
+              {/* Observações */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Observações"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  multiline
+                  rows={4}
+                />
+              </Grid>
             </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-    </Container>
+          </Box>
+        </CardContent>
+      </Card>
+    </MainLayout>
   );
 };
 

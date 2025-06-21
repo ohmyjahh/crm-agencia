@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -29,6 +27,11 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Card,
+  Avatar,
+  Stack,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,14 +43,20 @@ import {
   Delete as DeleteIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
+  FilterList as FilterIcon,
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
+  PlayArrow as PlayArrowIcon,
+  Cancel as CancelIcon,
+  Flag as FlagIcon,
 } from '@mui/icons-material';
 import { taskAPI, clientAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import MainLayout from '../Layout/MainLayout';
 
 const TaskList = ({ onNavigate }) => {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
@@ -74,10 +83,10 @@ const TaskList = ({ onNavigate }) => {
   const { isAdmin, user } = useAuth();
 
   const statusOptions = [
-    { value: 'pendente', label: 'Pendente', color: 'warning' },
-    { value: 'em_progresso', label: 'Em Progresso', color: 'info' },
-    { value: 'concluida', label: 'Concluída', color: 'success' },
-    { value: 'cancelada', label: 'Cancelada', color: 'error' }
+    { value: 'pendente', label: 'Pendente', color: 'warning', icon: <ScheduleIcon /> },
+    { value: 'em_progresso', label: 'Em Progresso', color: 'info', icon: <PlayArrowIcon /> },
+    { value: 'concluida', label: 'Concluída', color: 'success', icon: <CheckCircleIcon /> },
+    { value: 'cancelada', label: 'Cancelada', color: 'error', icon: <CancelIcon /> }
   ];
 
   const priorityOptions = [
@@ -118,24 +127,18 @@ const TaskList = ({ onNavigate }) => {
     }
   };
 
-  const loadInitialData = async () => {
+  const loadClients = async () => {
     try {
-      // Carregar dados iniciais em paralelo
-      const [clientsResponse, usersResponse] = await Promise.all([
-        clientAPI.getClients({ limit: 100 }),
-        taskAPI.getUsers()
-      ]);
-
-      setClients(clientsResponse.data.clients);
-      setUsers(usersResponse.data.users);
+      const response = await clientAPI.getClients({ limit: 100, active: true });
+      setClients(response.data.clients);
     } catch (error) {
-      console.error('Erro ao carregar dados iniciais:', error);
+      console.error('Erro ao carregar clientes:', error);
     }
   };
 
   useEffect(() => {
-    loadInitialData();
     loadTasks();
+    loadClients();
   }, []);
 
   const handleSearchChange = (event) => {
@@ -147,8 +150,8 @@ const TaskList = ({ onNavigate }) => {
     loadTasks(1, search, filters);
   };
 
-  const handleFilterChange = (filterName, value) => {
-    const newFilters = { ...filters, [filterName]: value };
+  const handleFilterChange = (field, value) => {
+    const newFilters = { ...filters, [field]: value };
     setFilters(newFilters);
     loadTasks(1, search, newFilters);
   };
@@ -194,8 +197,8 @@ const TaskList = ({ onNavigate }) => {
       await loadTasks(pagination.current_page, search, filters);
       handleDeleteClose();
     } catch (error) {
-      setError('Erro ao deletar tarefa');
-      console.error('Erro ao deletar tarefa:', error);
+      setError('Erro ao excluir tarefa');
+      console.error('Erro ao excluir tarefa:', error);
     } finally {
       setActionLoading(false);
     }
@@ -206,7 +209,7 @@ const TaskList = ({ onNavigate }) => {
   };
 
   const getPriorityConfig = (priority) => {
-    return priorityOptions.find(opt => opt.value === priority) || priorityOptions[1];
+    return priorityOptions.find(opt => opt.value === priority) || priorityOptions[0];
   };
 
   const formatDate = (dateString) => {
@@ -214,158 +217,230 @@ const TaskList = ({ onNavigate }) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const isOverdue = (task) => {
-    if (!task.due_date || task.status === 'concluida') return false;
-    return new Date(task.due_date) < new Date();
+  const isOverdue = (dueDate) => {
+    if (!dueDate) return false;
+    const today = new Date();
+    const due = new Date(dueDate);
+    return due < today;
   };
 
-  if (loading && tasks.length === 0) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const breadcrumbs = [
+    { label: 'Tarefas', onClick: () => onNavigate('tasks') }
+  ];
+
+  const headerActions = (
+    <Stack direction="row" spacing={1}>
+      <Button
+        variant="outlined"
+        startIcon={<FilterIcon />}
+        onClick={() => alert('Filtros expandidos em breve')}
+        sx={{ display: { xs: 'none', sm: 'flex' } }}
+      >
+        Filtros
+      </Button>
+      <Button
+        variant="contained"
+        startIcon={<AddIcon />}
+        onClick={() => onNavigate('task-form')}
+      >
+        Nova Tarefa
+      </Button>
+    </Stack>
+  );
+
+  // Calculate stats
+  const stats = {
+    total: pagination.total_records,
+    pendente: tasks.filter(t => t.status === 'pendente').length,
+    em_progresso: tasks.filter(t => t.status === 'em_progresso').length,
+    concluida: tasks.filter(t => t.status === 'concluida').length,
+    overdue: tasks.filter(t => isOverdue(t.due_date) && t.status !== 'concluida').length
+  };
 
   return (
-    <Container maxWidth="lg">
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Tarefas
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gerencie as tarefas da equipe
-          </Typography>
-        </Box>
-        
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => onNavigate('task-form')}
-          size="large"
-        >
-          Nova Tarefa
-        </Button>
-      </Box>
-
-      {/* Filtros */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          {/* Busca */}
-          <Grid item xs={12} md={4}>
-            <Box component="form" onSubmit={handleSearchSubmit}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Buscar tarefas..."
-                value={search}
-                onChange={handleSearchChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+    <MainLayout
+      title="Gestão de Tarefas"
+      breadcrumbs={breadcrumbs}
+      currentPage="tasks"
+      onNavigate={onNavigate}
+      headerActions={headerActions}
+    >
+      {/* Stats Summary */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'primary.light' }}>
+                <TaskIcon color="primary" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {stats.total}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total de Tarefas
+                </Typography>
+              </Box>
             </Box>
-          </Grid>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'warning.light' }}>
+                <ScheduleIcon color="warning" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {stats.pendente}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Pendentes
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
 
-          {/* Filtro Status */}
-          <Grid item xs={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={filters.status}
-                label="Status"
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {statusOptions.map(option => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'info.light' }}>
+                <PlayArrowIcon color="info" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {stats.em_progresso}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Em Progresso
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
 
-          {/* Filtro Prioridade */}
-          <Grid item xs={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Prioridade</InputLabel>
-              <Select
-                value={filters.priority}
-                label="Prioridade"
-                onChange={(e) => handleFilterChange('priority', e.target.value)}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {priorityOptions.map(option => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'error.light' }}>
+                <FlagIcon color="error" />
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {stats.overdue}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Atrasadas
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        </Grid>
+      </Grid>
 
-          {/* Filtro Cliente */}
-          <Grid item xs={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Cliente</InputLabel>
-              <Select
-                value={filters.client_id}
-                label="Cliente"
-                onChange={(e) => handleFilterChange('client_id', e.target.value)}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {clients.map(client => (
-                  <MenuItem key={client.id} value={client.id}>
-                    {client.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+      {/* Search and Filters */}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Buscar e Filtrar Tarefas
+          </Typography>
+          
+          {/* Search */}
+          <Box component="form" onSubmit={handleSearchSubmit} sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              placeholder="Buscar por título ou descrição..."
+              value={search}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Button type="submit" variant="contained" size="small">
+                      Buscar
+                    </Button>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
 
-          {/* Filtro Usuário (só para admin) */}
-          {isAdmin && (
-            <Grid item xs={6} md={2}>
+          {/* Filters */}
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth size="small">
-                <InputLabel>Atribuído a</InputLabel>
+                <InputLabel>Status</InputLabel>
                 <Select
-                  value={filters.assigned_to}
-                  label="Atribuído a"
-                  onChange={(e) => handleFilterChange('assigned_to', e.target.value)}
+                  value={filters.status}
+                  label="Status"
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
                 >
                   <MenuItem value="">Todos</MenuItem>
-                  {users.map(user => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name}
+                  {statusOptions.map(option => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
-          )}
 
-          {/* Toggle Minhas Tarefas */}
-          {!isAdmin && (
-            <Grid item xs={6} md={2}>
-              <Button
-                variant={filters.my_tasks ? 'contained' : 'outlined'}
-                onClick={() => handleFilterChange('my_tasks', !filters.my_tasks)}
-                size="small"
-                fullWidth
-              >
-                Minhas Tarefas
-              </Button>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Prioridade</InputLabel>
+                <Select
+                  value={filters.priority}
+                  label="Prioridade"
+                  onChange={(e) => handleFilterChange('priority', e.target.value)}
+                >
+                  <MenuItem value="">Todas</MenuItem>
+                  {priorityOptions.map(option => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
-          )}
-        </Grid>
-      </Paper>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Cliente</InputLabel>
+                <Select
+                  value={filters.client_id}
+                  label="Cliente"
+                  onChange={(e) => handleFilterChange('client_id', e.target.value)}
+                >
+                  <MenuItem value="">Todos</MenuItem>
+                  {clients.map(client => (
+                    <MenuItem key={client.id} value={client.id}>
+                      {client.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={filters.my_tasks}
+                    onChange={(e) => handleFilterChange('my_tasks', e.target.checked)}
+                  />
+                }
+                label="Apenas minhas tarefas"
+              />
+            </Grid>
+          </Grid>
+        </Box>
+      </Card>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -373,139 +448,137 @@ const TaskList = ({ onNavigate }) => {
         </Alert>
       )}
 
-      {/* Tabela */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Tarefa</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Atribuído a</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Prioridade</TableCell>
-              <TableCell>Vencimento</TableCell>
-              <TableCell align="center">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tasks.length === 0 ? (
+      {/* Tasks Table */}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {search || Object.values(filters).some(f => f) ? 'Nenhuma tarefa encontrada' : 'Nenhuma tarefa cadastrada'}
-                  </Typography>
-                </TableCell>
+                <TableCell>Tarefa</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Prioridade</TableCell>
+                <TableCell>Responsável</TableCell>
+                <TableCell>Prazo</TableCell>
+                <TableCell align="center">Ações</TableCell>
               </TableRow>
-            ) : (
-              tasks.map((task) => (
-                <TableRow 
-                  key={task.id} 
-                  hover
-                  sx={{ 
-                    bgcolor: isOverdue(task) ? 'error.light' : 'inherit',
-                    '&:hover': {
-                      bgcolor: isOverdue(task) ? 'error.main' : 'inherit'
-                    }
-                  }}
-                >
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TaskIcon color="primary" />
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {task.title}
-                        </Typography>
-                        {task.description && (
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                            sx={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 1,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {task.description}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  
-                  <TableCell>
-                    {task.client_name ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <BusinessIcon fontSize="small" color="action" />
-                        <Typography variant="body2">{task.client_name}</Typography>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">-</Typography>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon fontSize="small" color="action" />
-                      <Typography variant="body2">{task.assigned_to_name}</Typography>
-                    </Box>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Chip
-                      label={getStatusConfig(task.status).label}
-                      color={getStatusConfig(task.status).color}
-                      size="small"
-                    />
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Chip
-                      label={getPriorityConfig(task.priority).label}
-                      color={getPriorityConfig(task.priority).color}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Typography 
-                      variant="body2"
-                      color={isOverdue(task) ? 'error' : 'inherit'}
-                      fontWeight={isOverdue(task) ? 'bold' : 'normal'}
-                    >
-                      {formatDate(task.due_date)}
-                    </Typography>
-                  </TableCell>
-                  
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, task)}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : tasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Nenhuma tarefa encontrada
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                tasks.map((task) => {
+                  const statusConfig = getStatusConfig(task.status);
+                  const priorityConfig = getPriorityConfig(task.priority);
+                  const overdue = isOverdue(task.due_date);
 
-      {/* Paginação */}
-      {pagination.total_pages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination
-            count={pagination.total_pages}
-            page={pagination.current_page}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
-      )}
+                  return (
+                    <TableRow key={task.id} hover>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar sx={{ bgcolor: `${statusConfig.color}.light`, width: 32, height: 32 }}>
+                            {statusConfig.icon}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" fontWeight="medium">
+                              {task.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {task.client_name ? `Cliente: ${task.client_name}` : 'Sem cliente'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Chip
+                          label={statusConfig.label}
+                          color={statusConfig.color}
+                          size="small"
+                          icon={statusConfig.icon}
+                        />
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Chip
+                          label={priorityConfig.label}
+                          color={priorityConfig.color}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 24, height: 24 }}>
+                            <PersonIcon fontSize="small" />
+                          </Avatar>
+                          <Typography variant="body2">
+                            {task.assigned_to_name || 'Não atribuída'}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Box>
+                          <Typography 
+                            variant="body2" 
+                            color={overdue ? 'error.main' : 'text.primary'}
+                          >
+                            {formatDate(task.due_date)}
+                          </Typography>
+                          {overdue && (
+                            <Chip 
+                              label="Atrasada" 
+                              color="error" 
+                              size="small" 
+                              sx={{ mt: 0.5 }}
+                            />
+                          )}
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell align="center">
+                        <IconButton
+                          onClick={(e) => handleMenuOpen(e, task)}
+                          size="small"
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Menu de ações */}
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <Pagination
+              count={pagination.total_pages}
+              page={pagination.current_page}
+              onChange={handlePageChange}
+              color="primary"
+            />
+          </Box>
+        )}
+      </Card>
+
+      {/* Action Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -519,56 +592,33 @@ const TaskList = ({ onNavigate }) => {
           <EditIcon sx={{ mr: 1 }} />
           Editar
         </MenuItem>
-        {isAdmin && (
-          <MenuItem onClick={handleDeleteOpen}>
-            <DeleteIcon sx={{ mr: 1 }} />
-            Deletar
-          </MenuItem>
-        )}
+        <MenuItem onClick={handleDeleteOpen} sx={{ color: 'error.main' }}>
+          <DeleteIcon sx={{ mr: 1 }} />
+          Excluir
+        </MenuItem>
       </Menu>
 
-      {/* Dialog de confirmação */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog} onClose={handleDeleteClose}>
-        <DialogTitle>Deletar Tarefa</DialogTitle>
+        <DialogTitle>Excluir Tarefa</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Tem certeza que deseja deletar a tarefa "{selectedTask?.title}"?
+            Tem certeza que deseja excluir a tarefa "{selectedTask?.title}"?
             Esta ação não pode ser desfeita.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDeleteClose}>Cancelar</Button>
-          <Button
-            onClick={handleDeleteConfirm}
+          <Button 
+            onClick={handleDeleteConfirm} 
             color="error"
-            variant="contained"
             disabled={actionLoading}
           >
-            {actionLoading ? <CircularProgress size={20} /> : 'Deletar'}
+            {actionLoading ? <CircularProgress size={20} /> : 'Excluir'}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Loading overlay */}
-      {loading && tasks.length > 0 && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: 'rgba(255,255,255,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
-    </Container>
+    </MainLayout>
   );
 };
 
