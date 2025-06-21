@@ -33,7 +33,8 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
     notes: '',
     category: 'bronze',
     service_format: 'avulso',
-    average_ticket: ''
+    average_ticket: '',
+    is_active: true
   });
   
   const [loading, setLoading] = useState(false);
@@ -67,7 +68,11 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
         city: client.city || '',
         state: client.state || '',
         zip_code: client.zip_code || '',
-        notes: client.notes || ''
+        notes: client.notes || '',
+        category: client.category || 'bronze',
+        service_format: client.service_format || 'avulso',
+        average_ticket: client.average_ticket || '',
+        is_active: client.is_active !== undefined ? client.is_active : true
       });
     } catch (error) {
       setError('Erro ao carregar dados do cliente');
@@ -392,7 +397,7 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   select
@@ -407,7 +412,7 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   select
@@ -422,7 +427,7 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Ticket Médio (R$)"
@@ -434,6 +439,23 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
                   placeholder="0,00"
                 />
               </Grid>
+
+              {/* Status - só aparece ao editar */}
+              {isEditing && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Status do Cliente"
+                    name="is_active"
+                    value={formData.is_active}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}
+                  >
+                    <MenuItem value={true}>✅ Ativo</MenuItem>
+                    <MenuItem value={false}>❌ Inativo</MenuItem>
+                  </TextField>
+                </Grid>
+              )}
 
               {/* Observações */}
               <Grid item xs={12}>
