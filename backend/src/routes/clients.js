@@ -2,6 +2,7 @@ const express = require('express');
 const { body, param } = require('express-validator');
 const { authenticateToken } = require('../middleware/auth');
 const { canManageClients } = require('../middleware/authorize');
+const { uploadImportSingle, handleImportUploadError } = require('../middleware/clientImport');
 const clientController = require('../controllers/clientController');
 
 const router = express.Router();
@@ -81,6 +82,10 @@ router.use(authenticateToken);
 
 // Rotas públicas para funcionários (podem gerenciar clientes)
 router.get('/', canManageClients, clientController.getClients);
+// Rotas de Import/Export devem vir antes das rotas com parâmetro :id
+router.post('/import', canManageClients, uploadImportSingle, handleImportUploadError, clientController.importClients);
+router.get('/export', canManageClients, clientController.exportClients);
+
 router.get('/:id', clientIdValidation, canManageClients, clientController.getClientById);
 router.post('/', clientValidation, canManageClients, clientController.createClient);
 router.put('/:id', [...clientIdValidation, ...clientValidation], canManageClients, clientController.updateClient);
