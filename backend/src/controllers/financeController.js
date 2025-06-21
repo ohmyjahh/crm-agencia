@@ -360,6 +360,107 @@ const getCategories = async (req, res) => {
   }
 };
 
+// Criar categoria
+const createCategory = async (req, res) => {
+  try {
+    const { name, type, description } = req.body;
+    const userId = req.user.id;
+
+    if (!name || !type) {
+      return res.status(400).json({ error: 'Nome e tipo são obrigatórios' });
+    }
+
+    // Verificar se categoria já existe
+    const existingCategory = await pool.query(
+      'SELECT id FROM finance_categories WHERE name = ? AND type = ? AND is_active = 1',
+      [name, type]
+    );
+
+    if (existingCategory.rows.length > 0) {
+      return res.status(400).json({ error: 'Categoria já existe para este tipo' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO finance_categories (name, type, description, created_by)
+      VALUES (?, ?, ?, ?)
+    `, [name, type, description, userId]);
+
+    // Buscar categoria criada
+    const newCategory = await pool.query(
+      'SELECT * FROM finance_categories WHERE id = ?',
+      [result.lastID]
+    );
+
+    res.status(201).json({
+      message: 'Categoria criada com sucesso',
+      category: newCategory.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar categoria:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+// Buscar formas de pagamento
+const getPaymentMethods = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM payment_methods 
+      WHERE is_active = 1 
+      ORDER BY name
+    `);
+
+    res.json({ payment_methods: result.rows });
+
+  } catch (error) {
+    console.error('Erro ao buscar formas de pagamento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+// Criar forma de pagamento
+const createPaymentMethod = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const userId = req.user.id;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Nome é obrigatório' });
+    }
+
+    // Verificar se forma de pagamento já existe
+    const existingMethod = await pool.query(
+      'SELECT id FROM payment_methods WHERE name = ? AND is_active = 1',
+      [name]
+    );
+
+    if (existingMethod.rows.length > 0) {
+      return res.status(400).json({ error: 'Forma de pagamento já existe' });
+    }
+
+    const result = await pool.query(`
+      INSERT INTO payment_methods (name, description, created_by)
+      VALUES (?, ?, ?)
+    `, [name, description, userId]);
+
+    // Buscar forma de pagamento criada
+    const newMethod = await pool.query(
+      'SELECT * FROM payment_methods WHERE id = ?',
+      [result.lastID]
+    );
+
+    res.status(201).json({
+      message: 'Forma de pagamento criada com sucesso',
+      payment_method: newMethod.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar forma de pagamento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 // Estatísticas financeiras
 const getFinanceStats = async (req, res) => {
   try {
@@ -555,6 +656,9 @@ module.exports = {
   updateTransaction,
   deleteTransaction,
   getCategories,
+  createCategory,
+  getPaymentMethods,
+  createPaymentMethod,
   getFinanceStats,
   uploadDREFile,
   processDREWithAI

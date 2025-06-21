@@ -45,6 +45,7 @@ const FinanceDashboard = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,6 +57,8 @@ const FinanceDashboard = ({ onNavigate }) => {
   // Estados para modais
   const [transactionModal, setTransactionModal] = useState(false);
   const [dreModal, setDREModal] = useState(false);
+  const [categoryModal, setCategoryModal] = useState(false);
+  const [paymentMethodModal, setPaymentMethodModal] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   
   // Estados para formulários
@@ -68,6 +71,18 @@ const FinanceDashboard = ({ onNavigate }) => {
     transaction_date: new Date().toISOString().split('T')[0],
     payment_method: '',
     notes: ''
+  });
+  
+  // Estados para formulários de criação
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    type: 'entrada',
+    description: ''
+  });
+  
+  const [paymentMethodForm, setPaymentMethodForm] = useState({
+    name: '',
+    description: ''
   });
   
   const [dreFile, setDREFile] = useState(null);
@@ -83,19 +98,21 @@ const FinanceDashboard = ({ onNavigate }) => {
       setLoading(true);
       setError(null);
 
-      const [statsResponse, transactionsResponse, categoriesResponse, clientsResponse] = await Promise.all([
+      const [statsResponse, transactionsResponse, categoriesResponse, paymentMethodsResponse, clientsResponse] = await Promise.all([
         financeAPI.getFinanceStats(selectedPeriod),
         financeAPI.getTransactions({ 
           limit: 10, 
           ...selectedPeriod 
         }),
         financeAPI.getCategories(),
+        financeAPI.getPaymentMethods(),
         clientAPI.getClients({ limit: 100 })
       ]);
 
       setStats(statsResponse.data);
       setRecentTransactions(transactionsResponse.data.transactions);
       setCategories(categoriesResponse.data.categories);
+      setPaymentMethods(paymentMethodsResponse.data.payment_methods);
       setClients(clientsResponse.data.clients);
     } catch (error) {
       setError('Erro ao carregar dados financeiros');
@@ -173,6 +190,58 @@ const FinanceDashboard = ({ onNavigate }) => {
     }
   };
 
+  const handleCreateCategory = async () => {
+    try {
+      if (!categoryForm.name || !categoryForm.type) {
+        setError('Nome e tipo são obrigatórios');
+        return;
+      }
+
+      setUploading(true);
+      
+      await financeAPI.createCategory(categoryForm);
+      
+      setCategoryModal(false);
+      setCategoryForm({ name: '', type: 'entrada', description: '' });
+      
+      // Recarregar categorias
+      const categoriesResponse = await financeAPI.getCategories();
+      setCategories(categoriesResponse.data.categories);
+      
+    } catch (error) {
+      setError('Erro ao criar categoria');
+      console.error('Erro ao criar categoria:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCreatePaymentMethod = async () => {
+    try {
+      if (!paymentMethodForm.name) {
+        setError('Nome é obrigatório');
+        return;
+      }
+
+      setUploading(true);
+      
+      await financeAPI.createPaymentMethod(paymentMethodForm);
+      
+      setPaymentMethodModal(false);
+      setPaymentMethodForm({ name: '', description: '' });
+      
+      // Recarregar métodos de pagamento
+      const paymentMethodsResponse = await financeAPI.getPaymentMethods();
+      setPaymentMethods(paymentMethodsResponse.data.payment_methods);
+      
+    } catch (error) {
+      setError('Erro ao criar método de pagamento');
+      console.error('Erro ao criar método de pagamento:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -183,6 +252,25 @@ const FinanceDashboard = ({ onNavigate }) => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
+
+  // Métodos de pagamento predefinidos
+  const defaultPaymentMethods = [
+    { id: 'credito', name: 'Crédito', icon: '💳', color: '#4caf50' },
+    { id: 'debito', name: 'Débito', icon: '💳', color: '#2196f3' },
+    { id: 'pix', name: 'PIX', icon: '📱', color: '#ff9800' },
+    { id: 'transferencia', name: 'Transferência', icon: '🏦', color: '#9c27b0' },
+  ];
+
+  const allPaymentMethods = [
+    ...defaultPaymentMethods,
+    ...paymentMethods.map(pm => ({ 
+      id: pm.id, 
+      name: pm.name, 
+      icon: '💰', 
+      color: '#607d8b',
+      isCustom: true 
+    }))
+  ];
 
   if (loading) {
     return (
@@ -476,16 +564,20 @@ const FinanceDashboard = ({ onNavigate }) => {
       </Grid>
 
       {/* Modal de Nova Transação */}
-      <Dialog open={transactionModal} onClose={() => setTransactionModal(false)} maxWidth="md" fullWidth>
+      <Dialog open={transactionModal} onClose={() => setTransactionModal(false)} maxWidth="lg" fullWidth>
         <DialogTitle>Nova Transação</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Primeira linha - Tipo e Valor */}
             <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Tipo
+              </Typography>
               <FormControl fullWidth>
-                <InputLabel>Tipo</InputLabel>
+                <InputLabel>Selecione o tipo</InputLabel>
                 <Select
                   value={transactionForm.type}
-                  label="Tipo"
+                  label="Selecione o tipo"
                   onChange={(e) => setTransactionForm(prev => ({ ...prev, type: e.target.value }))}
                 >
                   <MenuItem value="entrada">Entrada</MenuItem>
@@ -495,9 +587,12 @@ const FinanceDashboard = ({ onNavigate }) => {
             </Grid>
             
             <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Valor
+              </Typography>
               <TextField
                 fullWidth
-                label="Valor"
+                label="Digite o valor"
                 type="number"
                 value={transactionForm.amount}
                 onChange={(e) => setTransactionForm(prev => ({ ...prev, amount: e.target.value }))}
@@ -505,41 +600,63 @@ const FinanceDashboard = ({ onNavigate }) => {
               />
             </Grid>
             
+            {/* Segunda linha - Descrição (linha completa) */}
             <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Descrição
+              </Typography>
               <TextField
                 fullWidth
-                label="Descrição"
+                label="Descreva a transação"
                 value={transactionForm.description}
                 onChange={(e) => setTransactionForm(prev => ({ ...prev, description: e.target.value }))}
               />
             </Grid>
             
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Categoria</InputLabel>
-                <Select
-                  value={transactionForm.category_id}
-                  label="Categoria"
-                  onChange={(e) => setTransactionForm(prev => ({ ...prev, category_id: e.target.value }))}
+            {/* Terceira linha - Categoria com botão + */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Categoria
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+                <FormControl fullWidth>
+                  <InputLabel>Selecione uma categoria</InputLabel>
+                  <Select
+                    value={transactionForm.category_id}
+                    label="Selecione uma categoria"
+                    onChange={(e) => setTransactionForm(prev => ({ ...prev, category_id: e.target.value }))}
+                  >
+                    <MenuItem value="">Sem categoria</MenuItem>
+                    {categories
+                      .filter(cat => cat.type === transactionForm.type)
+                      .map(category => (
+                      <MenuItem key={category.id} value={category.id}>
+                        {category.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <IconButton 
+                  color="primary" 
+                  onClick={() => setCategoryModal(true)}
+                  sx={{ mb: 0.5 }}
+                  title="Adicionar nova categoria"
                 >
-                  <MenuItem value="">Sem categoria</MenuItem>
-                  {categories
-                    .filter(cat => cat.type === transactionForm.type)
-                    .map(category => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  <AddIcon />
+                </IconButton>
+              </Box>
             </Grid>
             
+            {/* Quarta linha - Cliente e Data */}
             <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Cliente
+              </Typography>
               <FormControl fullWidth>
-                <InputLabel>Cliente</InputLabel>
+                <InputLabel>Selecione um cliente</InputLabel>
                 <Select
                   value={transactionForm.client_id}
-                  label="Cliente"
+                  label="Selecione um cliente"
                   onChange={(e) => setTransactionForm(prev => ({ ...prev, client_id: e.target.value }))}
                 >
                   <MenuItem value="">Sem cliente</MenuItem>
@@ -553,9 +670,12 @@ const FinanceDashboard = ({ onNavigate }) => {
             </Grid>
             
             <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Data
+              </Typography>
               <TextField
                 fullWidth
-                label="Data"
+                label="Selecione a data"
                 type="date"
                 value={transactionForm.transaction_date}
                 onChange={(e) => setTransactionForm(prev => ({ ...prev, transaction_date: e.target.value }))}
@@ -563,20 +683,60 @@ const FinanceDashboard = ({ onNavigate }) => {
               />
             </Grid>
             
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Forma de Pagamento"
-                value={transactionForm.payment_method}
-                onChange={(e) => setTransactionForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                placeholder="Ex: Cartão, PIX, Dinheiro"
-              />
+            <Grid item xs={12}>
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '1rem' }}>
+                    Forma de Pagamento
+                  </Typography>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setPaymentMethodModal(true)}
+                    variant="outlined"
+                  >
+                    Adicionar Nova
+                  </Button>
+                </Box>
+                <Grid container spacing={2}>
+                  {allPaymentMethods.map((method) => (
+                    <Grid item xs={6} sm={4} md={3} key={method.id}>
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          cursor: 'pointer',
+                          border: transactionForm.payment_method === method.name ? 2 : 1,
+                          borderColor: transactionForm.payment_method === method.name ? method.color : 'divider',
+                          '&:hover': {
+                            borderColor: method.color,
+                            boxShadow: 2
+                          },
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                        onClick={() => setTransactionForm(prev => ({ ...prev, payment_method: method.name }))}
+                      >
+                        <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
+                          <Typography variant="h3" sx={{ mb: 1.5 }}>
+                            {method.icon}
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.875rem' }}>
+                            {method.name}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             </Grid>
             
             <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Observações
+              </Typography>
               <TextField
                 fullWidth
-                label="Observações"
+                label="Adicione observações (opcional)"
                 multiline
                 rows={3}
                 value={transactionForm.notes}
@@ -645,6 +805,100 @@ const FinanceDashboard = ({ onNavigate }) => {
             startIcon={uploading ? <CircularProgress size={20} /> : <AIIcon />}
           >
             {uploading ? 'Processando...' : 'Processar com IA'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Nova Categoria */}
+      <Dialog open={categoryModal} onClose={() => setCategoryModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Nova Categoria</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Nome da Categoria"
+                value={categoryForm.name}
+                onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Vendas, Marketing, Despesas Operacionais"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Tipo</InputLabel>
+                <Select
+                  value={categoryForm.type}
+                  label="Tipo"
+                  onChange={(e) => setCategoryForm(prev => ({ ...prev, type: e.target.value }))}
+                >
+                  <MenuItem value="entrada">Entrada</MenuItem>
+                  <MenuItem value="saida">Saída</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Descrição (Opcional)"
+                multiline
+                rows={3}
+                value={categoryForm.description}
+                onChange={(e) => setCategoryForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descreva o uso desta categoria..."
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoryModal(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleCreateCategory} 
+            variant="contained"
+            disabled={uploading || !categoryForm.name}
+          >
+            {uploading ? <CircularProgress size={20} /> : 'Criar Categoria'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Novo Método de Pagamento */}
+      <Dialog open={paymentMethodModal} onClose={() => setPaymentMethodModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Novo Método de Pagamento</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Nome do Método"
+                value={paymentMethodForm.name}
+                onChange={(e) => setPaymentMethodForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Cartão Corporativo, Cheque, Financiamento"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Descrição (Opcional)"
+                multiline
+                rows={3}
+                value={paymentMethodForm.description}
+                onChange={(e) => setPaymentMethodForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descreva detalhes deste método de pagamento..."
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentMethodModal(false)}>Cancelar</Button>
+          <Button 
+            onClick={handleCreatePaymentMethod} 
+            variant="contained"
+            disabled={uploading || !paymentMethodForm.name}
+          >
+            {uploading ? <CircularProgress size={20} /> : 'Criar Método'}
           </Button>
         </DialogActions>
       </Dialog>

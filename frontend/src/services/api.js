@@ -118,6 +118,15 @@ export const financeAPI = {
   getCategories: (type = null) => 
     api.get('/finance/categories', { params: type ? { type } : {} }),
   
+  createCategory: (categoryData) => 
+    api.post('/finance/categories', categoryData),
+    
+  getPaymentMethods: () => 
+    api.get('/finance/payment-methods'),
+  
+  createPaymentMethod: (paymentMethodData) => 
+    api.post('/finance/payment-methods', paymentMethodData),
+  
   getFinanceStats: (params = {}) => 
     api.get('/finance/transactions/stats', { params }),
   

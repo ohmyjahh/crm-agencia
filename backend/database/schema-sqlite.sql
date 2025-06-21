@@ -71,6 +71,17 @@ CREATE TABLE IF NOT EXISTS finance_categories (
     type TEXT NOT NULL CHECK (type IN ('entrada', 'saida')),
     description TEXT,
     is_active INTEGER DEFAULT 1,
+    created_by TEXT REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tabela de Formas de Pagamento
+CREATE TABLE IF NOT EXISTS payment_methods (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_by TEXT REFERENCES users(id),
     created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -108,6 +119,13 @@ CREATE TABLE IF NOT EXISTS dre_uploads (
     uploaded_at TEXT DEFAULT (datetime('now')),
     processed_at TEXT
 );
+
+-- Inserção de dados iniciais para métodos de pagamento
+INSERT OR IGNORE INTO payment_methods (id, name, description, is_active, created_by, created_at) VALUES
+('credito', 'Crédito', 'Pagamento com cartão de crédito', 1, 'system', datetime('now')),
+('debito', 'Débito', 'Pagamento com cartão de débito', 1, 'system', datetime('now')),
+('pix', 'PIX', 'Transferência via PIX', 1, 'system', datetime('now')),
+('transferencia', 'Transferência', 'Transferência bancária', 1, 'system', datetime('now'));
 
 -- Índices para melhor performance
 CREATE INDEX IF NOT EXISTS idx_clients_document ON clients(document);

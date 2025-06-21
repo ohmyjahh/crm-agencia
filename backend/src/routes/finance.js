@@ -79,6 +79,11 @@ router.delete('/transactions/:id', idValidation, financeController.deleteTransac
 
 // Rotas de categorias
 router.get('/categories', financeController.getCategories);
+router.post('/categories', financeController.createCategory);
+
+// Rotas de formas de pagamento
+router.get('/payment-methods', financeController.getPaymentMethods);
+router.post('/payment-methods', financeController.createPaymentMethod);
 
 // Rotas de DRE com IA
 router.post('/dre/upload', 
