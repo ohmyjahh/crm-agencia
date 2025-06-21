@@ -19,8 +19,23 @@ import {
   Home as HomeIcon,
 } from '@mui/icons-material';
 import { SIDEBAR_WIDTH } from './Sidebar';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
-const Header = ({ 
+interface BreadcrumbItem {
+  label: string;
+  onClick?: () => void;
+}
+
+interface HeaderProps {
+  title: string;
+  breadcrumbs?: BreadcrumbItem[];
+  onMenuToggle?: () => void;
+  onBack?: () => void;
+  showBackButton?: boolean;
+  actions?: React.ReactNode;
+}
+
+const Header: React.FC<HeaderProps> = ({ 
   title, 
   breadcrumbs = [], 
   onMenuToggle, 
@@ -29,7 +44,7 @@ const Header = ({
   actions = null 
 }) => {
   
-  const handleBreadcrumbClick = (item) => {
+  const handleBreadcrumbClick = (item: BreadcrumbItem) => {
     if (item.onClick) {
       item.onClick();
     }
@@ -40,7 +55,7 @@ const Header = ({
       position="sticky"
       sx={{
         width: '100%',
-        bgcolor: 'white',
+        bgcolor: 'background.paper',
         color: 'text.primary',
         boxShadow: 1,
         borderBottom: '1px solid',
@@ -98,7 +113,7 @@ const Header = ({
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleBreadcrumbClick({ onClick: () => window.location.reload() });
+                    handleBreadcrumbClick({ label: 'Início', onClick: () => window.location.reload() });
                   }}
                   sx={{ 
                     display: 'flex', 
@@ -155,6 +170,9 @@ const Header = ({
         {/* Actions */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {actions}
+          
+          {/* Theme Toggle */}
+          <ThemeToggle />
           
           {/* Search */}
           <IconButton color="inherit" sx={{ display: { xs: 'none', sm: 'flex' } }}>

@@ -23,10 +23,18 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 const SIDEBAR_WIDTH = 240;
 
-const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
+interface SidebarProps {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+  mobileOpen: boolean;
+  onMobileToggle: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -75,9 +83,9 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
   };
 
   const sidebarContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
       {/* Header */}
-      <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'grey.200' }}>
+      <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
           <Box sx={{ 
             width: 36, 
@@ -138,7 +146,7 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
                     },
                   },
                   '&:hover': {
-                    bgcolor: 'grey.100',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100',
                   },
                 }}
               >
@@ -157,32 +165,24 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
           ))}
         </List>
 
-        {/* Performance Card */}
-        <Box sx={{ mx: 3, mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Box sx={{
-              width: 32,
-              height: 32,
-              borderRadius: 2,
-              bgcolor: 'success.light',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <TrendingUpIcon sx={{ color: 'success.dark', fontSize: 18 }} />
-            </Box>
+        {/* Theme Toggle Card */}
+        <Box sx={{ 
+          mx: 3, 
+          mt: 4, 
+          p: 3, 
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.50', 
+          borderRadius: 3,
+          border: 1,
+          borderColor: 'divider'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="subtitle2" fontWeight="600">
-              Performance
+              Aparência
             </Typography>
+            <ThemeToggle variant="switch" />
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-            Este mês
-          </Typography>
-          <Typography variant="h5" fontWeight="bold" color="success.dark">
-            +24%
-          </Typography>
           <Typography variant="caption" color="text.secondary">
-            vs. mês anterior
+            Altere o tema entre claro e escuro
           </Typography>
         </Box>
       </Box>

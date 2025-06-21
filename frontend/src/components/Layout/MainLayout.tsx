@@ -3,7 +3,23 @@ import { Box, Toolbar } from '@mui/material';
 import Sidebar, { SIDEBAR_WIDTH } from './Sidebar';
 import Header from './Header';
 
-const MainLayout = ({ 
+interface BreadcrumbItem {
+  label: string;
+  onClick?: () => void;
+}
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+  title: string;
+  breadcrumbs?: BreadcrumbItem[];
+  currentPage: string;
+  onNavigate: (page: string) => void;
+  showBackButton?: boolean;
+  onBack?: () => void;
+  headerActions?: React.ReactNode;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ 
   children, 
   title, 
   breadcrumbs = [], 
