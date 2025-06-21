@@ -44,7 +44,8 @@ const Dashboard = ({ onNavigate }) => {
       change: '+12%',
       changeType: 'positive',
       icon: <BusinessIcon />,
-      color: '#1976d2',
+      color: '#00bcd4',
+      gradient: 'linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)',
       description: 'Total de clientes',
       subtitle: '3 novos este mês'
     },
@@ -54,7 +55,8 @@ const Dashboard = ({ onNavigate }) => {
       change: '-15%',
       changeType: 'positive',
       icon: <TaskIcon />,
-      color: '#ed6c02',
+      color: '#26a69a',
+      gradient: 'linear-gradient(135deg, #26a69a 0%, #80cbc4 100%)',
       description: 'Aguardando execução',
       subtitle: '2 vencendo hoje'
     },
@@ -64,7 +66,8 @@ const Dashboard = ({ onNavigate }) => {
       change: '+8.2%',
       changeType: 'positive',
       icon: <MoneyIcon />,
-      color: '#2e7d32',
+      color: '#4caf50',
+      gradient: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
       description: 'Faturamento atual',
       subtitle: 'Meta: R$ 50.000'
     },
@@ -74,7 +77,8 @@ const Dashboard = ({ onNavigate }) => {
       change: '+5%',
       changeType: 'positive',
       icon: <TrendingUpIcon />,
-      color: '#9c27b0',
+      color: '#ff7043',
+      gradient: 'linear-gradient(135deg, #ff7043 0%, #ffab91 100%)',
       description: 'Leads convertidos',
       subtitle: 'Acima da média'
     }] : []),
@@ -180,30 +184,32 @@ const Dashboard = ({ onNavigate }) => {
         {statsCards.map((stat, index) => (
           <Grid item xs={12} sm={6} lg={3} key={index}>
             <Card 
-              elevation={0} 
               sx={{ 
                 height: '100%',
-                border: '1px solid',
-                borderColor: 'divider',
+                background: stat.gradient,
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
-                  boxShadow: 2,
-                  transform: 'translateY(-2px)',
-                  transition: 'all 0.2s ease-in-out'
+                  transform: 'translateY(-4px)',
+                  transition: 'all 0.3s ease-in-out',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)'
                 }
               }}
             >
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 2,
-                      bgcolor: `${stat.color}15`,
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      backdropFilter: 'blur(10px)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: stat.color
+                      color: 'white'
                     }}
                   >
                     {stat.icon}
@@ -211,22 +217,41 @@ const Dashboard = ({ onNavigate }) => {
                   <Chip
                     label={stat.change}
                     size="small"
-                    color={stat.changeType === 'positive' ? 'success' : 'error'}
-                    icon={stat.changeType === 'positive' ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                    icon={<TrendingUpIcon sx={{ color: 'white !important' }} />}
                   />
                 </Box>
                 
-                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
                   {stat.value}
                 </Typography>
                 
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 1 }}>
                   {stat.description}
                 </Typography>
                 
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                   {stat.subtitle}
                 </Typography>
+
+                {/* Background decoration */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: -20,
+                    right: -20,
+                    width: 100,
+                    height: 100,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    zIndex: 0
+                  }}
+                />
               </CardContent>
             </Card>
           </Grid>

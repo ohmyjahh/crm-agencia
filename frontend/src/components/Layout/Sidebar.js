@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_WIDTH = 240;
 
 const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
   const { user, logout } = useAuth();
@@ -75,74 +75,81 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
   };
 
   const sidebarContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
       {/* Header */}
-      <Box sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <BusinessIcon sx={{ fontSize: 32 }} />
-          <Typography variant="h6" fontWeight="bold">
+      <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'grey.200' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <Box sx={{ 
+            width: 36, 
+            height: 36, 
+            borderRadius: 2, 
+            bgcolor: 'primary.main',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <BusinessIcon sx={{ fontSize: 20, color: 'white' }} />
+          </Box>
+          <Typography variant="h6" fontWeight="bold" color="text.primary">
             CRM Agency
           </Typography>
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: 'primary.light', width: 40, height: 40 }}>
+          <Avatar sx={{ bgcolor: 'grey.100', color: 'text.primary', width: 32, height: 32 }}>
             {user?.name?.charAt(0) || 'U'}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" fontWeight="medium" noWrap>
+            <Typography variant="body2" fontWeight="medium" noWrap>
               {user?.name || 'Usuário'}
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }} noWrap>
-              {user?.email || 'email@exemplo.com'}
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {user?.role === 'administrador' ? 'Administrador' : 'Funcionário'}
             </Typography>
           </Box>
         </Box>
-        
-        {user?.role === 'administrador' && (
-          <Chip 
-            label="Admin" 
-            size="small" 
-            sx={{ 
-              mt: 1, 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              color: 'white',
-              fontSize: '0.7rem'
-            }} 
-          />
-        )}
       </Box>
 
       {/* Menu Principal */}
-      <Box sx={{ flex: 1, px: 1, py: 2 }}>
-        <List>
+      <Box sx={{ flex: 1, py: 2 }}>
+        <Box sx={{ px: 2, mb: 2 }}>
+          <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+            Workspace
+          </Typography>
+        </Box>
+        
+        <List sx={{ px: 2 }}>
           {menuItems.map((item) => (
-            <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+            <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
               <ListItemButton
                 onClick={() => onNavigate(item.path)}
                 selected={currentPage === item.id || currentPage === item.path}
                 sx={{
-                  borderRadius: 2,
-                  mx: 1,
+                  borderRadius: 3,
+                  py: 1.5,
                   '&.Mui-selected': {
-                    bgcolor: `${item.color}15`,
-                    color: item.color,
+                    bgcolor: 'primary.main',
+                    color: 'white',
                     '& .MuiListItemIcon-root': {
-                      color: item.color,
+                      color: 'white',
+                    },
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
                     },
                   },
                   '&:hover': {
-                    bgcolor: `${item.color}08`,
+                    bgcolor: 'grey.100',
                   },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
+                <ListItemIcon sx={{ minWidth: 36 }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.label}
                   primaryTypographyProps={{
-                    fontWeight: currentPage === item.id || currentPage === item.path ? 600 : 400,
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
                   }}
                 />
               </ListItemButton>
@@ -150,19 +157,32 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
           ))}
         </List>
 
-        {/* Stats Card */}
-        <Box sx={{ mx: 2, mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <TrendingUpIcon sx={{ color: 'success.main', fontSize: 20 }} />
-            <Typography variant="subtitle2" fontWeight="bold">
+        {/* Performance Card */}
+        <Box sx={{ mx: 3, mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Box sx={{
+              width: 32,
+              height: 32,
+              borderRadius: 2,
+              bgcolor: 'success.light',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <TrendingUpIcon sx={{ color: 'success.dark', fontSize: 18 }} />
+            </Box>
+            <Typography variant="subtitle2" fontWeight="600">
               Performance
             </Typography>
           </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
             Este mês
           </Typography>
-          <Typography variant="h6" fontWeight="bold" color="success.main">
+          <Typography variant="h5" fontWeight="bold" color="success.dark">
             +24%
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            vs. mês anterior
           </Typography>
         </Box>
       </Box>

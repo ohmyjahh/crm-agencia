@@ -20,7 +20,7 @@ const MainLayout = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'grey.50' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Sidebar */}
       <Box
         component="nav"
@@ -43,7 +43,7 @@ const MainLayout = ({
         sx={{
           flexGrow: 1,
           width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
-          bgcolor: 'grey.50',
+          bgcolor: 'background.default',
           minHeight: '100vh',
           overflow: 'hidden',
         }}
