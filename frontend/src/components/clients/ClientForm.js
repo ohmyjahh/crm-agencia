@@ -30,7 +30,10 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
     city: '',
     state: '',
     zip_code: '',
-    notes: ''
+    notes: '',
+    category: 'bronze',
+    service_format: 'avulso',
+    average_ticket: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -160,7 +163,13 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
       // Limpar dados vazios
       const cleanData = {};
       Object.keys(formData).forEach(key => {
-        if (formData[key]?.trim()) {
+        if (key === 'average_ticket') {
+          // Para campos numéricos
+          cleanData[key] = parseFloat(formData[key]) || 0;
+        } else if (['category', 'service_format'].includes(key)) {
+          // Para campos obrigatórios
+          cleanData[key] = formData[key];
+        } else if (formData[key]?.trim()) {
           cleanData[key] = formData[key].trim();
         }
       });
@@ -373,6 +382,56 @@ const ClientForm = ({ clientId, onNavigate, onBack }) => {
                   name="zip_code"
                   value={formData.zip_code}
                   onChange={handleChange}
+                />
+              </Grid>
+
+              {/* Categorização e Serviços */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Categorização e Serviços
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Categoria do Cliente"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="bronze">🥉 Bronze</MenuItem>
+                  <MenuItem value="prata">🥈 Prata</MenuItem>
+                  <MenuItem value="ouro">🥇 Ouro</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Formato do Serviço"
+                  name="service_format"
+                  value={formData.service_format}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="recorrente">🔄 Recorrente</MenuItem>
+                  <MenuItem value="avulso">📝 Avulso</MenuItem>
+                  <MenuItem value="personalizado">⚙️ Personalizado</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Ticket Médio (R$)"
+                  name="average_ticket"
+                  type="number"
+                  value={formData.average_ticket}
+                  onChange={handleChange}
+                  inputProps={{ min: 0, step: 0.01 }}
+                  placeholder="0,00"
                 />
               </Grid>
 

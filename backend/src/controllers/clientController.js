@@ -4,7 +4,15 @@ const pool = require('../config/database');
 // Listar todos os clientes
 const getClients = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10, active = 'true' } = req.query;
+    const { 
+      search, 
+      page = 1, 
+      limit = 10, 
+      active = 'true',
+      category,
+      service_format,
+      document_type 
+    } = req.query;
     const offset = (page - 1) * limit;
 
     let query = `
@@ -20,6 +28,27 @@ const getClients = async (req, res) => {
     if (active !== 'all') {
       query += ` AND c.is_active = ?`;
       params.push(active === 'true' ? 1 : 0);
+      paramIndex++;
+    }
+
+    // Filtro por categoria
+    if (category) {
+      query += ` AND c.category = ?`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    // Filtro por formato do serviço
+    if (service_format) {
+      query += ` AND c.service_format = ?`;
+      params.push(service_format);
+      paramIndex++;
+    }
+
+    // Filtro por tipo de documento
+    if (document_type) {
+      query += ` AND c.document_type = ?`;
+      params.push(document_type);
       paramIndex++;
     }
 
@@ -49,6 +78,21 @@ const getClients = async (req, res) => {
     if (active !== 'all') {
       countQuery += ` AND c.is_active = ?`;
       countParams.push(active === 'true' ? 1 : 0);
+    }
+
+    if (category) {
+      countQuery += ` AND c.category = ?`;
+      countParams.push(category);
+    }
+
+    if (service_format) {
+      countQuery += ` AND c.service_format = ?`;
+      countParams.push(service_format);
+    }
+
+    if (document_type) {
+      countQuery += ` AND c.document_type = ?`;
+      countParams.push(document_type);
     }
 
     if (search) {
@@ -121,7 +165,10 @@ const createClient = async (req, res) => {
       city,
       state,
       zip_code,
-      notes
+      notes,
+      category,
+      service_format,
+      average_ticket
     } = req.body;
 
     const userId = req.user.id;
@@ -153,9 +200,10 @@ const createClient = async (req, res) => {
     const result = await pool.query(`
       INSERT INTO clients (
         name, email, phone, document, document_type, 
-        address, city, state, zip_code, notes, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [name, email, phone, document, document_type, address, city, state, zip_code, notes, userId]);
+        address, city, state, zip_code, notes, category, 
+        service_format, average_ticket, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [name, email, phone, document, document_type, address, city, state, zip_code, notes, category || 'bronze', service_format || 'avulso', average_ticket || 0, userId]);
 
     // Buscar cliente criado para retornar dados completos
     const newClientResult = await pool.query(`
@@ -198,7 +246,11 @@ const updateClient = async (req, res) => {
       city,
       state,
       zip_code,
-      notes
+      notes,
+      category,
+      service_format,
+      average_ticket,
+      is_active
     } = req.body;
 
     // Verificar se cliente existe
@@ -234,9 +286,10 @@ const updateClient = async (req, res) => {
     await pool.query(`
       UPDATE clients SET
         name = ?, email = ?, phone = ?, document = ?, document_type = ?,
-        address = ?, city = ?, state = ?, zip_code = ?, notes = ?
+        address = ?, city = ?, state = ?, zip_code = ?, notes = ?,
+        category = ?, service_format = ?, average_ticket = ?, is_active = ?
       WHERE id = ?
-    `, [name, email, phone, document, document_type, address, city, state, zip_code, notes, id]);
+    `, [name, email, phone, document, document_type, address, city, state, zip_code, notes, category || 'bronze', service_format || 'avulso', average_ticket || 0, is_active !== undefined ? (is_active ? 1 : 0) : 1, id]);
 
     // Buscar cliente atualizado
     const updatedClientResult = await pool.query(`

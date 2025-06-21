@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const clientRoutes = require('./routes/clients');
 const taskRoutes = require('./routes/tasks');
 const financeRoutes = require('./routes/finance');
+const serviceRoutes = require('./routes/services');
 // const userRoutes = require('./routes/users');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/services', serviceRoutes);
 // app.use('/api/users', userRoutes);
 
 // Error handling middleware

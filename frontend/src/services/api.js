@@ -143,6 +143,38 @@ export const financeAPI = {
     api.get('/finance/dre/uploads', { params })
 };
 
+// Service endpoints
+export const serviceAPI = {
+  getServices: (params = {}) => 
+    api.get('/services', { params }),
+  
+  getServiceById: (id) => 
+    api.get(`/services/${id}`),
+  
+  createService: (serviceData) => 
+    api.post('/services', serviceData),
+  
+  updateService: (id, serviceData) => 
+    api.put(`/services/${id}`, serviceData),
+  
+  deleteService: (id) => 
+    api.delete(`/services/${id}`),
+  
+  // Client purchases
+  getClientPurchases: (clientId) => 
+    api.get(`/services/clients/${clientId}/purchases`),
+  
+  createClientPurchase: (clientId, purchaseData) => 
+    api.post(`/services/clients/${clientId}/purchases`, purchaseData),
+  
+  // Client services
+  getClientServices: (clientId) => 
+    api.get(`/services/clients/${clientId}/services`),
+  
+  createClientService: (clientId, serviceData) => 
+    api.post(`/services/clients/${clientId}/services`, serviceData),
+};
+
 // Health check
 export const healthCheck = () => 
   api.get('/health');
