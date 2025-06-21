@@ -37,15 +37,15 @@ const Header = ({
 
   return (
     <AppBar
-      position="fixed"
+      position="sticky"
       sx={{
-        width: { md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
-        ml: { md: `${SIDEBAR_WIDTH}px` },
+        width: '100%',
         bgcolor: 'white',
         color: 'text.primary',
         boxShadow: 1,
         borderBottom: '1px solid',
         borderColor: 'divider',
+        zIndex: (theme) => theme.zIndex.drawer - 1,
       }}
     >
       <Toolbar sx={{ px: { xs: 2, md: 3 } }}>

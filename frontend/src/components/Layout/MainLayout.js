@@ -22,21 +22,30 @@ const MainLayout = ({
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'grey.50' }}>
       {/* Sidebar */}
-      <Sidebar
-        currentPage={currentPage}
-        onNavigate={onNavigate}
-        mobileOpen={mobileOpen}
-        onMobileToggle={handleDrawerToggle}
-      />
+      <Box
+        component="nav"
+        sx={{ 
+          width: { md: SIDEBAR_WIDTH }, 
+          flexShrink: { md: 0 } 
+        }}
+      >
+        <Sidebar
+          currentPage={currentPage}
+          onNavigate={onNavigate}
+          mobileOpen={mobileOpen}
+          onMobileToggle={handleDrawerToggle}
+        />
+      </Box>
 
       {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          width: { md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+          width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
           bgcolor: 'grey.50',
           minHeight: '100vh',
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
@@ -50,13 +59,12 @@ const MainLayout = ({
         />
         
         {/* Content Area */}
-        <Toolbar /> {/* Spacer for fixed header */}
-        
         <Box sx={{ 
           p: { xs: 2, md: 3 },
           maxWidth: '1400px',
           mx: 'auto',
-          width: '100%'
+          width: '100%',
+          overflow: 'auto',
         }}>
           {children}
         </Box>

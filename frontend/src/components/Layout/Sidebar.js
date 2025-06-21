@@ -250,6 +250,8 @@ const Sidebar = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
             width: SIDEBAR_WIDTH,
             border: 'none',
             boxShadow: 1,
+            position: 'relative',
+            height: '100vh',
           },
         }}
         open
