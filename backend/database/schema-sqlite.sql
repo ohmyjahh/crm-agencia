@@ -91,6 +91,24 @@ CREATE TABLE IF NOT EXISTS finance_transactions (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Tabela de Uploads para DRE com IA
+CREATE TABLE IF NOT EXISTS dre_uploads (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    filename TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type TEXT NOT NULL,
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'processed', 'error')),
+    ai_result TEXT, -- JSON com resultado da IA
+    uploaded_by TEXT NOT NULL REFERENCES users(id),
+    uploaded_at TEXT DEFAULT (datetime('now')),
+    processed_at TEXT
+);
+
 -- Índices para melhor performance
 CREATE INDEX IF NOT EXISTS idx_clients_document ON clients(document);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
