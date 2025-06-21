@@ -98,6 +98,42 @@ export const taskAPI = {
     api.get('/tasks/stats')
 };
 
+// Finance endpoints
+export const financeAPI = {
+  getTransactions: (params = {}) => 
+    api.get('/finance/transactions', { params }),
+  
+  getTransactionById: (id) => 
+    api.get(`/finance/transactions/${id}`),
+  
+  createTransaction: (transactionData) => 
+    api.post('/finance/transactions', transactionData),
+  
+  updateTransaction: (id, transactionData) => 
+    api.put(`/finance/transactions/${id}`, transactionData),
+  
+  deleteTransaction: (id) => 
+    api.delete(`/finance/transactions/${id}`),
+  
+  getCategories: (type = null) => 
+    api.get('/finance/categories', { params: type ? { type } : {} }),
+  
+  getFinanceStats: (params = {}) => 
+    api.get('/finance/transactions/stats', { params }),
+  
+  // DRE com IA
+  uploadDREFile: (formData) => 
+    api.post('/finance/dre/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  processDREWithAI: (fileId) => 
+    api.post(`/finance/dre/process/${fileId}`),
+  
+  getDREUploads: (params = {}) => 
+    api.get('/finance/dre/uploads', { params })
+};
+
 // Health check
 export const healthCheck = () => 
   api.get('/health');

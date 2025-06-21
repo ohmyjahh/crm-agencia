@@ -8,6 +8,7 @@ import ClientList from './components/clients/ClientList';
 import ClientForm from './components/clients/ClientForm';
 import TaskList from './components/tasks/TaskList';
 import TaskForm from './components/tasks/TaskForm';
+import FinanceDashboard from './components/finance/FinanceDashboard';
 import { CircularProgress, Box } from '@mui/material';
 
 const theme = createTheme({
@@ -26,7 +27,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [pageData, setPageData] = useState({});
 
-  const handleNavigate = (page, data = {}) => {
+  const handleNavigate = (page: string, data: any = {}) => {
     setCurrentPage(page);
     setPageData(data);
   };
@@ -57,7 +58,7 @@ function AppContent() {
       case 'client-form':
         return (
           <ClientForm
-            clientId={pageData.clientId}
+            clientId={(pageData as any).clientId}
             onNavigate={handleNavigate}
             onBack={() => handleNavigate('clients')}
           />
@@ -77,7 +78,7 @@ function AppContent() {
       case 'task-form':
         return (
           <TaskForm
-            taskId={pageData.taskId}
+            taskId={(pageData as any).taskId}
             onNavigate={handleNavigate}
             onBack={() => handleNavigate('tasks')}
           />
@@ -88,6 +89,17 @@ function AppContent() {
           <Box sx={{ p: 3 }}>
             <h2>Detalhes da Tarefa (Em desenvolvimento)</h2>
             <button onClick={() => handleNavigate('tasks')}>Voltar</button>
+          </Box>
+        );
+      
+      case 'finance':
+        return <FinanceDashboard onNavigate={handleNavigate} />;
+      
+      case 'finance-transactions':
+        return (
+          <Box sx={{ p: 3 }}>
+            <h2>Lista de Transações (Em desenvolvimento)</h2>
+            <button onClick={() => handleNavigate('finance')}>Voltar</button>
           </Box>
         );
       

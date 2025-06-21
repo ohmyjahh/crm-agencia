@@ -85,10 +85,10 @@ const Dashboard = ({ onNavigate }) => {
       action: () => onNavigate('tasks')
     },
     { 
-      title: 'Registro Financeiro', 
-      description: 'Adicionar entrada/saída', 
+      title: 'Gestão Financeira', 
+      description: 'Dashboard financeiro', 
       color: 'success',
-      action: () => alert('Funcionalidade em desenvolvimento')
+      action: () => onNavigate('finance')
     },
     ...(isAdmin ? [{ 
       title: 'Novo Usuário', 
