@@ -71,7 +71,21 @@ export const clientAPI = {
     api.delete(`/clients/${id}`),
   
   activateClient: (id) => 
-    api.patch(`/clients/${id}/activate`)
+    api.patch(`/clients/${id}/activate`),
+  
+  importClients: (formData) => 
+    api.post('/clients/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  exportClients: (params = {}) => 
+    api.get('/clients/export', { 
+      params,
+      responseType: 'blob',
+      validateStatus: function (status) {
+        return status >= 200 && status < 300; // Accept only successful status codes
+      }
+    })
 };
 
 // Task endpoints
