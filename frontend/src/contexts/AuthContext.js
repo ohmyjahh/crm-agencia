@@ -18,28 +18,60 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is logged in on app start
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-      // Verify token is still valid
-      authAPI.getMe()
-        .then(response => {
-          setUser(response.data.user);
-        })
-        .catch(() => {
-          // Token invalid, clear storage
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+          // Verify token is still valid only if not already checking
+          if (!user) {
+            authAPI.getMe()
+              .then(response => {
+                setUser(response.data.user);
+              })
+              .catch(() => {
+                // Token invalid, clear storage
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setUser(null);
+              })
+              .finally(() => {
+                setLoading(false);
+              });
+          } else {
+            setLoading(false);
+          }
+        } catch (error) {
+          // Invalid stored user data
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
-        })
-        .finally(() => {
           setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+        }
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    };
+
+    // Initial check
+    checkAuth();
+
+    // Listen for storage changes (logout from other tabs or API interceptor)
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const login = async (email, password) => {

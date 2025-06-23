@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 // Create axios instance
 const api = axios.create({
@@ -32,7 +32,8 @@ api.interceptors.response.use(
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Instead of hard redirect, let the app handle the auth state change
+      window.dispatchEvent(new Event('storage'));
     }
     return Promise.reject(error);
   }
@@ -109,7 +110,46 @@ export const taskAPI = {
     api.get('/tasks/users'),
   
   getTaskStats: () => 
-    api.get('/tasks/stats')
+    api.get('/tasks/stats'),
+  
+  // Comments
+  addComment: (taskId, commentData) => 
+    api.post(`/tasks/${taskId}/comments`, commentData),
+  
+  getComments: (taskId) => 
+    api.get(`/tasks/${taskId}/comments`),
+  
+  // History
+  getHistory: (taskId) => 
+    api.get(`/tasks/${taskId}/history`),
+  
+  // Status update
+  updateStatus: (taskId, status) => 
+    api.patch(`/tasks/${taskId}/status`, { status }),
+  
+  // Attachments
+  uploadAttachment: (taskId, formData) => 
+    api.post(`/tasks/${taskId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  getAttachments: (taskId) => 
+    api.get(`/tasks/${taskId}/attachments`),
+  
+  downloadAttachment: (taskId, attachmentId) => 
+    api.get(`/tasks/${taskId}/attachments/${attachmentId}/download`, {
+      responseType: 'blob'
+    }),
+  
+  deleteAttachment: (taskId, attachmentId) => 
+    api.delete(`/tasks/${taskId}/attachments/${attachmentId}`),
+  
+  // Notifications
+  getOverdueTasks: () => 
+    api.get('/tasks/overdue'),
+  
+  getUpcomingTasks: (days = 3) => 
+    api.get('/tasks/upcoming', { params: { days } })
 };
 
 // Finance endpoints

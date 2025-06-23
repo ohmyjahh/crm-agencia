@@ -1,164 +1,156 @@
 import React, { useState, useEffect } from 'react';
 import {
   Grid,
-  Paper,
   Typography,
   Box,
   Card,
   CardContent,
-  Button,
-  Avatar,
-  Chip,
   IconButton,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Select,
+  MenuItem,
+  FormControl,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   People as PeopleIcon,
-  Business as BusinessIcon,
   Assignment as TaskIcon,
   AttachMoney as MoneyIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  Add as AddIcon,
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
-  AccountBalance as AccountBalanceIcon,
+  FilterList as FilterIcon,
+  BarChart as BarChartIcon,
+  Timeline as TimelineIcon,
+  PieChart as PieChartIcon,
+  ArrowForward as ArrowForwardIcon,
+  Warning as WarningIcon,
+  Today as TodayIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from './Layout/MainLayout';
+import { dashboardService } from '../services/dashboardService';
 
 const Dashboard = ({ onNavigate }) => {
-  const { user, isAdmin } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const [salesPeriod, setSalesPeriod] = useState('week');
+  
+  // Estados para dados reais
+  const [metrics, setMetrics] = useState({
+    totalClients: 0,
+    newClients: 0,
+    revenue: 0,
+    tasks: 0,
+    growth: { clients: 0, revenue: 0, tasks: 0 }
+  });
+  const [pendingTasks, setPendingTasks] = useState({ total: 0, overdue: 0, today: 0 });
+  const [newClients, setNewClients] = useState({ count: 0, averageTicket: 0, totalValue: 0 });
+  const [revenue, setRevenue] = useState({ total: 0, transactions: 0, byCategory: {} });
+  const [salesData, setSalesData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
 
-  const statsCards = [
-    {
-      title: 'Clientes Ativos',
-      value: '24',
-      change: '+12%',
-      changeType: 'positive',
-      icon: <BusinessIcon />,
-      color: '#00bcd4',
-      gradient: 'linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)',
-      description: 'Total de clientes',
-      subtitle: '3 novos este mês'
-    },
-    {
-      title: 'Tarefas Pendentes',
-      value: '8',
-      change: '-15%',
-      changeType: 'positive',
-      icon: <TaskIcon />,
-      color: '#26a69a',
-      gradient: 'linear-gradient(135deg, #26a69a 0%, #80cbc4 100%)',
-      description: 'Aguardando execução',
-      subtitle: '2 vencendo hoje'
-    },
-    {
-      title: 'Receita Mensal',
-      value: 'R$ 45.280',
-      change: '+8.2%',
-      changeType: 'positive',
-      icon: <MoneyIcon />,
-      color: '#4caf50',
-      gradient: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
-      description: 'Faturamento atual',
-      subtitle: 'Meta: R$ 50.000'
-    },
-    ...(isAdmin ? [{
-      title: 'Taxa de Conversão',
-      value: '68%',
-      change: '+5%',
-      changeType: 'positive',
-      icon: <TrendingUpIcon />,
-      color: '#ff7043',
-      gradient: 'linear-gradient(135deg, #ff7043 0%, #ffab91 100%)',
-      description: 'Leads convertidos',
-      subtitle: 'Acima da média'
-    }] : []),
-  ];
+  // Carregar dados do dashboard
+  useEffect(() => {
+    loadDashboardData();
+  }, [selectedPeriod, salesPeriod]);
 
-  const quickActions = [
-    { 
-      title: 'Novo Cliente', 
-      description: 'Cadastrar cliente', 
-      icon: <BusinessIcon />,
-      color: 'primary',
-      action: () => onNavigate('client-form')
-    },
-    { 
-      title: 'Nova Tarefa', 
-      description: 'Criar tarefa', 
-      icon: <TaskIcon />,
-      color: 'warning',
-      action: () => onNavigate('task-form')
-    },
-    { 
-      title: 'Lançamento Financeiro', 
-      description: 'Registrar transação', 
-      icon: <AccountBalanceIcon />,
-      color: 'success',
-      action: () => onNavigate('finance')
-    },
-  ];
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const recentActivities = [
-    {
-      id: 1,
-      action: 'Cliente "TechCorp" cadastrado',
-      time: 'Há 2 horas',
-      type: 'client',
-      icon: <BusinessIcon color="primary" />
-    },
-    {
-      id: 2,
-      action: 'Tarefa "Follow-up vendas" concluída',
-      time: 'Há 3 horas',
-      type: 'task',
-      icon: <CheckCircleIcon color="success" />
-    },
-    {
-      id: 3,
-      action: 'Receita de R$ 8.500 registrada',
-      time: 'Há 5 horas',
-      type: 'finance',
-      icon: <MoneyIcon color="success" />
-    },
-    {
-      id: 4,
-      action: 'Reunião agendada com ClienteXYZ',
-      time: 'Ontem',
-      type: 'meeting',
-      icon: <ScheduleIcon color="info" />
-    },
-  ];
+      // Carregar dados em paralelo
+      const [
+        metricsData,
+        tasksData,
+        clientsData,
+        revenueData,
+        salesChartData,
+        productsData
+      ] = await Promise.all([
+        dashboardService.getMetrics(selectedPeriod),
+        dashboardService.getPendingTasks(),
+        dashboardService.getNewClients(salesPeriod),
+        dashboardService.getRevenue(selectedPeriod),
+        dashboardService.getSalesData(salesPeriod),
+        dashboardService.getTopProducts()
+      ]);
+
+      setMetrics(metricsData);
+      setPendingTasks(tasksData);
+      setNewClients(clientsData);
+      setRevenue(revenueData);
+      setSalesData(salesChartData);
+      setTopProducts(productsData);
+
+    } catch (err) {
+      console.error('Erro ao carregar dados do dashboard:', err);
+      setError('Erro ao carregar dados do dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    loadDashboardData();
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatNumber = (value) => {
+    return new Intl.NumberFormat('pt-BR').format(value);
   };
 
   const headerActions = (
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      <IconButton onClick={handleRefresh} disabled={loading}>
-        <RefreshIcon />
-      </IconButton>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => onNavigate('client-form')}
-        sx={{ display: { xs: 'none', sm: 'flex' } }}
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+      <IconButton 
+        onClick={handleRefresh}
+        disabled={loading}
+        sx={{ 
+          bgcolor: '#f8f9fa', 
+          borderRadius: 2,
+          '&:hover': {
+            bgcolor: '#e9ecef'
+          }
+        }}
       >
-        Novo Cliente
-      </Button>
+        <RefreshIcon sx={{ fontSize: 18, color: '#666' }} />
+      </IconButton>
     </Box>
   );
+
+  if (error) {
+    return (
+      <MainLayout
+        title="Dashboard"
+        currentPage="dashboard"
+        onNavigate={onNavigate}
+        headerActions={headerActions}
+      >
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout
@@ -169,202 +161,581 @@ const Dashboard = ({ onNavigate }) => {
     >
       {loading && <LinearProgress sx={{ mb: 2 }} />}
       
-      {/* Welcome Section */}
+      {/* Header with subtitle */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom fontWeight="bold">
-          Bem-vindo de volta, {user?.name?.split(' ')[0]}! 👋
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Aqui está um resumo das suas atividades e métricas importantes.
+        <Typography 
+          variant="body1" 
+          color="text.secondary" 
+          sx={{ 
+            fontSize: '0.875rem',
+            fontWeight: 400,
+            mb: 1
+          }}
+        >
+          Acompanhe suas vendas e performance em tempo real
         </Typography>
       </Box>
 
-      {/* Stats Cards */}
+      {/* Main metrics cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {statsCards.map((stat, index) => (
-          <Grid item xs={12} sm={6} lg={3} key={index}>
-            <Card 
-              sx={{ 
-                height: '100%',
-                background: stat.gradient,
-                color: 'white',
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  transition: 'all 0.3s ease-in-out',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)'
-                }
-              }}
-            >
-              <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 3,
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      backdropFilter: 'blur(10px)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white'
-                    }}
-                  >
-                    {stat.icon}
-                  </Box>
-                  <Chip
-                    label={stat.change}
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                    icon={<TrendingUpIcon sx={{ color: 'white !important' }} />}
-                  />
-                </Box>
-                
-                <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
-                  {stat.value}
-                </Typography>
-                
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 1 }}>
-                  {stat.description}
-                </Typography>
-                
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {stat.subtitle}
-                </Typography>
-
-                {/* Background decoration */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: -20,
-                    right: -20,
-                    width: 100,
-                    height: 100,
-                    borderRadius: '50%',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    zIndex: 0
+        {/* Faturamento do Mês */}
+        <Grid item xs={12} md={3}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '160px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <CardContent sx={{ p: 3, flex: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    fontWeight: 400
                   }}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      <Grid container spacing={3}>
-        {/* Quick Actions */}
-        <Grid item xs={12} lg={8}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                Ações Rápidas
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Acesso rápido às funcionalidades mais utilizadas
+                >
+                  Faturamento do Mês
+                </Typography>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 2,
+                  bgcolor: '#e8f5e8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <MoneyIcon sx={{ fontSize: 18, color: '#4caf50' }} />
+                </Box>
+              </Box>
+              
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  color: '#000',
+                  mb: 1
+                }}
+              >
+                {formatCurrency(revenue.total)}
               </Typography>
               
-              <Grid container spacing={2}>
-                {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={4} key={index}>
-                    <Card 
-                      variant="outlined" 
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': { 
-                          boxShadow: 3,
-                          transform: 'translateY(-2px)',
-                          transition: 'all 0.2s ease-in-out'
-                        }
-                      }}
-                      onClick={action.action}
-                    >
-                      <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                        <Box
-                          sx={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 2,
-                            bgcolor: `${action.color}.light`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: `${action.color}.main`,
-                            mx: 'auto',
-                            mb: 2
-                          }}
-                        >
-                          {action.icon}
-                        </Box>
-                        <Typography variant="h6" gutterBottom>
-                          {action.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {action.description}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TrendingUpIcon sx={{ fontSize: 16, color: '#4caf50' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#4caf50',
+                    fontWeight: 500
+                  }}
+                >
+                  {revenue.transactions} transações
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Recent Activities */}
-        <Grid item xs={12} lg={4}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: 'fit-content' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" fontWeight="bold">
-                  Atividades Recentes
+        {/* Novos Clientes */}
+        <Grid item xs={12} md={3}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '160px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <CardContent sx={{ p: 3, flex: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    fontWeight: 400
+                  }}
+                >
+                  Novos Clientes
                 </Typography>
-                <IconButton size="small" onClick={handleRefresh}>
-                  <RefreshIcon fontSize="small" />
-                </IconButton>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 2,
+                  bgcolor: '#e3f2fd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <PeopleIcon sx={{ fontSize: 18, color: '#2196f3' }} />
+                </Box>
               </Box>
               
-              <List sx={{ py: 0 }}>
-                {recentActivities.map((activity, index) => (
-                  <React.Fragment key={activity.id}>
-                    <ListItem sx={{ px: 0, py: 1.5 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'transparent' }}>
-                          {activity.icon}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" fontWeight="medium">
-                            {activity.action}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {activity.time}
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                    {index < recentActivities.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-              
-              <Button 
-                variant="text" 
-                size="small" 
-                sx={{ mt: 1 }}
-                onClick={() => alert('Ver todas as atividades')}
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  color: '#000',
+                  mb: 1
+                }}
               >
-                Ver todas as atividades
-              </Button>
+                {formatNumber(newClients.count)}
+              </Typography>
+              
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  color: '#666'
+                }}
+              >
+                Ticket médio: {formatCurrency(newClients.averageTicket)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Tarefas Pendentes */}
+        <Grid item xs={12} md={3}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '160px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <CardContent sx={{ p: 3, flex: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    fontWeight: 400
+                  }}
+                >
+                  Tarefas Pendentes
+                </Typography>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 2,
+                  bgcolor: '#fff3e0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <TaskIcon sx={{ fontSize: 18, color: '#ff9800' }} />
+                </Box>
+              </Box>
+              
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  color: '#000',
+                  mb: 1
+                }}
+              >
+                {formatNumber(pendingTasks.total)}
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <WarningIcon sx={{ fontSize: 16, color: '#f44336' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#f44336',
+                    fontWeight: 500
+                  }}
+                >
+                  {pendingTasks.overdue} atrasadas
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Tarefas de Hoje */}
+        <Grid item xs={12} md={3}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '160px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <CardContent sx={{ p: 3, flex: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    fontWeight: 400
+                  }}
+                >
+                  Tarefas de Hoje
+                </Typography>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 2,
+                  bgcolor: '#f3e5f5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <TodayIcon sx={{ fontSize: 18, color: '#9c27b0' }} />
+                </Box>
+              </Box>
+              
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  color: '#000',
+                  mb: 1
+                }}
+              >
+                {formatNumber(pendingTasks.today)}
+              </Typography>
+              
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  color: '#666'
+                }}
+              >
+                Para hoje
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+      </Grid>
+
+      {/* Second row - Charts and analytics */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Gráfico de Vendas */}
+        <Grid item xs={12} md={8}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '350px'
+            }}
+          >
+            <CardContent sx={{ p: 3, height: '100%' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: '#000'
+                  }}
+                >
+                  Vendas no Período
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={salesPeriod}
+                    onChange={(e) => setSalesPeriod(e.target.value)}
+                    sx={{
+                      fontSize: '0.875rem',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: '1px solid #e0e0e0'
+                      }
+                    }}
+                  >
+                    <MenuItem value="week">Esta Semana</MenuItem>
+                    <MenuItem value="month">Este Mês</MenuItem>
+                    <MenuItem value="quarter">Este Trimestre</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Box sx={{ 
+                  height: 250, 
+                  display: 'flex', 
+                  alignItems: 'end', 
+                  gap: 1,
+                  p: 2,
+                  border: '1px solid #f0f0f0',
+                  borderRadius: 2
+                }}>
+                  {salesData.map((item, index) => {
+                    const maxValue = Math.max(...salesData.map(d => d.value));
+                    const height = (item.value / maxValue) * 100;
+                    return (
+                      <Box key={index} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: `${height}%`,
+                            bgcolor: '#4caf50',
+                            borderRadius: 1,
+                            mb: 1,
+                            minHeight: '20px'
+                          }}
+                        />
+                        <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>
+                          {item.date}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  color: '#666',
+                  mt: 2,
+                  textAlign: 'center'
+                }}
+              >
+                Total no período: {formatCurrency(newClients.totalValue)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Quick Stats */}
+        <Grid item xs={12} md={4}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3,
+              height: '350px'
+            }}
+          >
+            <CardContent sx={{ p: 3, height: '100%' }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  color: '#000',
+                  mb: 3
+                }}
+              >
+                Estatísticas Rápidas
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: 2,
+                      bgcolor: '#e3f2fd',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <PeopleIcon sx={{ fontSize: 16, color: '#2196f3' }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                      Total Clientes
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#000' }}>
+                    {loading ? '-' : formatNumber(metrics.totalClients)}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: 2,
+                      bgcolor: '#fff3e0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <TaskIcon sx={{ fontSize: 16, color: '#ff9800' }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                      Total Tarefas
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#000' }}>
+                    {loading ? '-' : formatNumber(metrics.tasks)}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: 2,
+                      bgcolor: '#e8f5e8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <ShoppingCartIcon sx={{ fontSize: 16, color: '#4caf50' }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                      Transações
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#000' }}>
+                    {loading ? '-' : formatNumber(revenue.transactions)}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 'auto', pt: 3 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999',
+                    textAlign: 'center'
+                  }}
+                >
+                  Dados atualizados em tempo real
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Top Products Table */}
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: '1px solid #e0e0e0',
+              borderRadius: 3
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: '#000'
+                  }}
+                >
+                  Produtos Mais Vendidos
+                </Typography>
+                <Typography
+                  variant="text"
+                  onClick={() => onNavigate('products')}
+                  sx={{
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    '&:hover': {
+                      color: '#000'
+                    }
+                  }}
+                >
+                  Ver Todos →
+                </Typography>
+              </Box>
+
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : topProducts.length > 0 ? (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 400, borderBottom: '1px solid #f0f0f0' }}>
+                          Produto
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 400, borderBottom: '1px solid #f0f0f0' }}>
+                          Vendas
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 400, borderBottom: '1px solid #f0f0f0' }}>
+                          Receita
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 400, borderBottom: '1px solid #f0f0f0' }}>
+                          Clientes
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {topProducts.map((product, index) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderBottom: index === topProducts.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                              {product.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: index === topProducts.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                            <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                              {product.sales} vendas
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: index === topProducts.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                            <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                              {formatCurrency(product.revenue)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: index === topProducts.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                            <Typography sx={{ fontSize: '0.875rem', color: '#666' }}>
+                              {product.clients.length}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    Nenhum produto vendido ainda
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>

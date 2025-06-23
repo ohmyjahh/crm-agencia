@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth-simple');
 const { canManageFinances } = require('../middleware/authorize');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const financeController = require('../controllers/financeController');

@@ -10,6 +10,8 @@ const clientRoutes = require('./routes/clients');
 const taskRoutes = require('./routes/tasks');
 const financeRoutes = require('./routes/finance');
 const serviceRoutes = require('./routes/services');
+const productRoutes = require('./routes/products');
+const followupRoutes = require('./routes/followups');
 // const userRoutes = require('./routes/users');
 
 const app = express();
@@ -32,6 +34,8 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/followups', followupRoutes);
 // app.use('/api/users', userRoutes);
 
 // Error handling middleware

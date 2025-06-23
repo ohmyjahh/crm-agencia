@@ -52,12 +52,17 @@ import {
   Upload as UploadIcon,
   Download as DownloadIcon,
   DateRange as DateRangeIcon,
+  CheckCircle as ActiveIcon,
+  Cancel as InactiveIcon,
+  Category as CategoryIcon,
+  Settings as FormatIcon,
 } from '@mui/icons-material';
 import { clientAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import MainLayout from '../Layout/MainLayout';
 import ClientFormModal from './ClientFormModal';
 import ClientViewModal from './ClientViewModal';
+import EditableStatus from '../ui/EditableStatus';
 
 const ClientList = ({ onNavigate }) => {
   const [clients, setClients] = useState([]);
@@ -117,6 +122,24 @@ const ClientList = ({ onNavigate }) => {
   const [clientFormLoading, setClientFormLoading] = useState(false);
 
   const { isAdmin } = useAuth();
+
+  // Configurações de status padrão
+  const clientStatusOptions = [
+    { value: 'true', label: 'Ativo', color: 'success', icon: <ActiveIcon fontSize="small" /> },
+    { value: 'false', label: 'Inativo', color: 'default', icon: <InactiveIcon fontSize="small" /> }
+  ];
+
+  const categoryOptions = [
+    { value: 'bronze', label: '🥉 Bronze', color: 'default', icon: <CategoryIcon fontSize="small" /> },
+    { value: 'prata', label: '🥈 Prata', color: 'info', icon: <CategoryIcon fontSize="small" /> },
+    { value: 'ouro', label: '🥇 Ouro', color: 'warning', icon: <CategoryIcon fontSize="small" /> }
+  ];
+
+  const formatOptions = [
+    { value: 'avulso', label: '📝 Avulso', color: 'default', icon: <FormatIcon fontSize="small" /> },
+    { value: 'recorrente', label: '🔄 Recorrente', color: 'info', icon: <FormatIcon fontSize="small" /> },
+    { value: 'personalizado', label: '⚙️ Personalizado', color: 'secondary', icon: <FormatIcon fontSize="small" /> }
+  ];
 
   const loadClients = async (page = 1, searchTerm = search, currentFilters = filters) => {
     try {
@@ -356,6 +379,38 @@ const ClientList = ({ onNavigate }) => {
     }
   };
 
+  // Função para atualizar status do cliente
+  const handleStatusChange = async (client, field, newValue) => {
+    try {
+      setToggleLoading(client.id);
+      
+      // Preparar dados de atualização
+      const updateData = { [field]: newValue };
+      
+      // Se for status ativo/inativo, tratar de forma especial
+      if (field === 'is_active') {
+        const isActivating = newValue === 'true';
+        if (isActivating) {
+          await clientAPI.activateClient(client.id);
+        } else {
+          await clientAPI.deleteClient(client.id);
+        }
+      } else {
+        // Para outros campos, fazer update direto
+        await clientAPI.updateClient(client.id, updateData);
+      }
+      
+      // Recarregar a lista mantendo os filtros atuais
+      await loadClients(pagination.current_page, search, filters);
+      
+    } catch (error) {
+      setError(`Erro ao atualizar ${field} do cliente`);
+      console.error(`Erro ao atualizar ${field} do cliente:`, error);
+    } finally {
+      setToggleLoading(null);
+    }
+  };
+
   const handleMenuOpen = (event, client) => {
     setAnchorEl(event.currentTarget);
     setSelectedClient(client);
@@ -456,18 +511,51 @@ const ClientList = ({ onNavigate }) => {
       headerActions={headerActions}
     >
       {/* Stats Summary */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.light' }}>
-                <BusinessIcon color="primary" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <BusinessIcon sx={{ color: '#666', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
                   {pagination.total_records}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
                   Total de Clientes
                 </Typography>
               </Box>
@@ -476,16 +564,49 @@ const ClientList = ({ onNavigate }) => {
         </Grid>
         
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'success.light' }}>
-                <PersonIcon color="success" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <PersonIcon sx={{ color: '#4caf50', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
                   {clients.filter(c => c.is_active).length}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
                   Clientes Ativos
                 </Typography>
               </Box>
@@ -495,9 +616,24 @@ const ClientList = ({ onNavigate }) => {
       </Grid>
 
       {/* Action Buttons */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3,
+          mb: 4 
+        }}
+      >
         <Box sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontSize: '0.875rem',
+              color: '#666',
+              fontWeight: 400,
+              mb: 3
+            }}
+          >
             Ações Rápidas
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -505,7 +641,17 @@ const ClientList = ({ onNavigate }) => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleNewClient}
-              color="primary"
+              sx={{
+                bgcolor: '#000',
+                color: 'white',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                '&:hover': {
+                  bgcolor: '#333'
+                }
+              }}
             >
               Novo Cliente
             </Button>
@@ -513,6 +659,17 @@ const ClientList = ({ onNavigate }) => {
               variant="outlined"
               startIcon={<UploadIcon />}
               onClick={() => setImportDialog(true)}
+              sx={{
+                borderColor: '#e0e0e0',
+                color: '#666',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  borderColor: '#666',
+                  bgcolor: '#f8f9fa'
+                }
+              }}
             >
               Importar Clientes
             </Button>
@@ -520,6 +677,17 @@ const ClientList = ({ onNavigate }) => {
               variant="outlined"
               startIcon={<DownloadIcon />}
               onClick={() => setExportDialog(true)}
+              sx={{
+                borderColor: '#e0e0e0',
+                color: '#666',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  borderColor: '#666',
+                  bgcolor: '#f8f9fa'
+                }
+              }}
             >
               Exportar Clientes
             </Button>
@@ -527,7 +695,18 @@ const ClientList = ({ onNavigate }) => {
               variant={hasActiveFilters() ? "contained" : "outlined"}
               startIcon={<FilterIcon />}
               onClick={() => setFilterDrawer(true)}
-              color={hasActiveFilters() ? "primary" : "inherit"}
+              sx={{
+                borderColor: hasActiveFilters() ? 'transparent' : '#e0e0e0',
+                bgcolor: hasActiveFilters() ? '#000' : 'transparent',
+                color: hasActiveFilters() ? 'white' : '#666',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  borderColor: hasActiveFilters() ? 'transparent' : '#666',
+                  bgcolor: hasActiveFilters() ? '#333' : '#f8f9fa'
+                }
+              }}
             >
               Filtros {hasActiveFilters() && `(${Object.values(filters).filter(v => v !== 'all').length})`}
             </Button>
@@ -536,9 +715,24 @@ const ClientList = ({ onNavigate }) => {
       </Card>
 
       {/* Search */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3,
+          mb: 4 
+        }}
+      >
         <Box sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontSize: '0.875rem',
+              color: '#666',
+              fontWeight: 400,
+              mb: 3
+            }}
+          >
             Buscar Clientes
           </Typography>
           <Box component="form" onSubmit={handleSearchSubmit}>
@@ -547,15 +741,44 @@ const ClientList = ({ onNavigate }) => {
               placeholder="Buscar por nome, email, telefone ou documento..."
               value={search}
               onChange={handleSearchChange}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  fontSize: '0.875rem',
+                  '& fieldset': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#666'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#000'
+                  }
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Button type="submit" variant="contained" size="small">
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      size="small"
+                      sx={{
+                        bgcolor: '#000',
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        '&:hover': {
+                          bgcolor: '#333'
+                        }
+                      }}
+                    >
                       Buscar
                     </Button>
                   </InputAdornment>
@@ -573,18 +796,87 @@ const ClientList = ({ onNavigate }) => {
       )}
 
       {/* Clients Table */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3
+        }}
+      >
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Contato</TableCell>
-                <TableCell>Documento</TableCell>
-                <TableCell>Categoria</TableCell>
-                <TableCell>Formato</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="center">Ações</TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Cliente
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Contato
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Documento
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Categoria
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Formato
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Status
+                </TableCell>
+                <TableCell align="center" sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Ações
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -604,119 +896,135 @@ const ClientList = ({ onNavigate }) => {
                 </TableRow>
               ) : (
                 clients.map((client) => (
-                  <TableRow key={client.id} hover>
-                    <TableCell>
+                  <TableRow key={client.id} hover sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.light' }}>
+                        <Avatar sx={{ 
+                          bgcolor: '#f8f9fa',
+                          width: 32,
+                          height: 32
+                        }}>
                           {client.document_type === 'CNPJ' ? (
-                            <BusinessIcon color="primary" />
+                            <BusinessIcon sx={{ color: '#666', fontSize: 16 }} />
                           ) : (
-                            <PersonIcon color="primary" />
+                            <PersonIcon sx={{ color: '#666', fontSize: 16 }} />
                           )}
                         </Avatar>
                         <Box>
-                          <Typography variant="body1" fontWeight="medium">
+                          <Typography 
+                            variant="body1" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              color: '#000'
+                            }}
+                          >
                             {client.name}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              fontSize: '0.75rem',
+                              color: '#999'
+                            }}
+                          >
                             {client.document_type} • {client.city || 'Cidade não informada'}
                           </Typography>
                         </Box>
                       </Box>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
                       <Box>
                         {client.email && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                            <EmailIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2">{client.email}</Typography>
+                            <EmailIcon sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ fontSize: '0.75rem', color: '#666' }}
+                            >
+                              {client.email}
+                            </Typography>
                           </Box>
                         )}
                         {client.phone && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <PhoneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                            <Typography variant="body2">{client.phone}</Typography>
+                            <PhoneIcon sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ fontSize: '0.75rem', color: '#666' }}
+                            >
+                              {client.phone}
+                            </Typography>
                           </Box>
                         )}
                         {!client.email && !client.phone && (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography 
+                            variant="body2" 
+                            sx={{ fontSize: '0.75rem', color: '#999' }}
+                          >
                             Sem contato
                           </Typography>
                         )}
                       </Box>
                     </TableCell>
                     
-                    <TableCell>
-                      <Typography variant="body2">
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontSize: '0.75rem', color: '#666' }}
+                      >
                         {formatDocument(client.document, client.document_type)}
                       </Typography>
                     </TableCell>
                     
-                    <TableCell>
-                      <Chip
-                        label={
-                          client.category === 'bronze' ? '🥉 Bronze' :
-                          client.category === 'prata' ? '🥈 Prata' :
-                          client.category === 'ouro' ? '🥇 Ouro' : 'Bronze'
-                        }
-                        color={
-                          client.category === 'ouro' ? 'warning' :
-                          client.category === 'prata' ? 'info' : 'default'
-                        }
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <EditableStatus
+                        value={client.category || 'bronze'}
+                        onChange={(newValue) => handleStatusChange(client, 'category', newValue)}
+                        options={categoryOptions}
+                        loading={toggleLoading === client.id}
+                        statusType="client_category"
                         size="small"
                       />
                     </TableCell>
                     
-                    <TableCell>
-                      <Chip
-                        label={
-                          client.service_format === 'recorrente' ? '🔄 Recorrente' :
-                          client.service_format === 'personalizado' ? '⚙️ Personalizado' :
-                          '📝 Avulso'
-                        }
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <EditableStatus
+                        value={client.service_format || 'avulso'}
+                        onChange={(newValue) => handleStatusChange(client, 'service_format', newValue)}
+                        options={formatOptions}
+                        loading={toggleLoading === client.id}
+                        statusType="client_format"
+                        size="small"
                         variant="outlined"
+                      />
+                    </TableCell>
+                    
+                    <TableCell sx={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <EditableStatus
+                        value={client.is_active ? 'true' : 'false'}
+                        onChange={(newValue) => handleStatusChange(client, 'is_active', newValue)}
+                        options={clientStatusOptions}
+                        loading={toggleLoading === client.id}
+                        statusType="client_status"
                         size="small"
                       />
                     </TableCell>
                     
-                    <TableCell>
-                      <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                        <Chip
-                          label={client.is_active ? 'Ativo' : 'Inativo'}
-                          color={client.is_active ? 'success' : 'default'}
-                          size="small"
-                          onClick={() => handleQuickStatusToggle(client)}
-                          disabled={toggleLoading === client.id}
-                          sx={{ 
-                            cursor: 'pointer',
-                            '&:hover': {
-                              opacity: 0.8,
-                              transform: 'scale(1.05)'
-                            }
-                          }}
-                        />
-                        {toggleLoading === client.id && (
-                          <CircularProgress 
-                            size={16} 
-                            sx={{ 
-                              position: 'absolute', 
-                              top: '50%', 
-                              left: '50%', 
-                              transform: 'translate(-50%, -50%)',
-                              zIndex: 1
-                            }} 
-                          />
-                        )}
-                      </Box>
-                    </TableCell>
-                    
-                    <TableCell align="center">
+                    <TableCell align="center" sx={{ borderBottom: '1px solid #f0f0f0' }}>
                       <IconButton
                         onClick={(e) => handleMenuOpen(e, client)}
                         size="small"
+                        sx={{
+                          bgcolor: '#f8f9fa',
+                          borderRadius: 1.5,
+                          '&:hover': {
+                            bgcolor: '#e0e0e0'
+                          }
+                        }}
                       >
-                        <MoreVertIcon />
+                        <MoreVertIcon sx={{ fontSize: 16, color: '#666' }} />
                       </IconButton>
                     </TableCell>
                   </TableRow>

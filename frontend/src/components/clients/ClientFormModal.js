@@ -16,6 +16,7 @@ import {
   Person as PersonIcon,
 } from '@mui/icons-material';
 import { clientAPI } from '../../services/api';
+import apiClient from '../../services/api';
 
 const ClientFormModal = ({ client, onSave, onCancel, loading, setLoading, setError }) => {
   const [formData, setFormData] = useState({
@@ -32,8 +33,11 @@ const ClientFormModal = ({ client, onSave, onCancel, loading, setLoading, setErr
     category: 'bronze',
     service_format: 'avulso',
     average_ticket: '',
+    produto_interesse: '',
     is_active: true
   });
+
+  const [products, setProducts] = useState([]);
 
   const isEditing = Boolean(client);
 
@@ -53,6 +57,7 @@ const ClientFormModal = ({ client, onSave, onCancel, loading, setLoading, setErr
         category: client.category || 'bronze',
         service_format: client.service_format || 'avulso',
         average_ticket: client.average_ticket || '',
+        produto_interesse: client.produto_interesse || '',
         is_active: client.is_active !== undefined ? client.is_active : true
       });
     } else {
@@ -71,10 +76,27 @@ const ClientFormModal = ({ client, onSave, onCancel, loading, setLoading, setErr
         category: 'bronze',
         service_format: 'avulso',
         average_ticket: '',
+        produto_interesse: '',
         is_active: true
       });
     }
   }, [client]);
+
+  // Carregar produtos disponíveis
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await apiClient.get('/products');
+        const productsData = response.data.data || [];
+        setProducts(productsData.filter(product => product.status === 'ativo'));
+      } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+        setProducts([]);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -326,6 +348,24 @@ const ClientFormModal = ({ client, onSave, onCancel, loading, setLoading, setErr
             <MenuItem value="recorrente">Recorrente</MenuItem>
             <MenuItem value="avulso">Avulso</MenuItem>
             <MenuItem value="personalizado">Personalizado</MenuItem>
+          </TextField>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <TextField
+            fullWidth
+            select
+            label="Produto de Interesse"
+            name="produto_interesse"
+            value={formData.produto_interesse}
+            onChange={handleChange}
+            size="small"
+          >
+            <MenuItem value="">Nenhum</MenuItem>
+            {products.map((product) => (
+              <MenuItem key={product.id} value={product.name}>
+                {product.name}
+              </MenuItem>
+            ))}
           </TextField>
         </Grid>
         <Grid item xs={12} md={3}>

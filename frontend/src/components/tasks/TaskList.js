@@ -53,6 +53,9 @@ import {
 import { taskAPI, clientAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import MainLayout from '../Layout/MainLayout';
+import TaskFormModal from './TaskFormModal';
+import TaskViewModal from './TaskViewModal';
+import EditableStatus from '../ui/EditableStatus';
 
 const TaskList = ({ onNavigate }) => {
   const [tasks, setTasks] = useState([]);
@@ -79,14 +82,23 @@ const TaskList = ({ onNavigate }) => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(null);
+
+  // Task modal states
+  const [taskFormDialog, setTaskFormDialog] = useState(false);
+  const [taskViewDialog, setTaskViewDialog] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [viewingTask, setViewingTask] = useState(null);
+  const [taskFormLoading, setTaskFormLoading] = useState(false);
 
   const { isAdmin, user } = useAuth();
 
   const statusOptions = [
-    { value: 'pendente', label: 'Pendente', color: 'warning', icon: <ScheduleIcon /> },
+    { value: 'novo', label: 'Novo', color: 'warning', icon: <ScheduleIcon /> },
     { value: 'em_progresso', label: 'Em Progresso', color: 'info', icon: <PlayArrowIcon /> },
-    { value: 'concluida', label: 'Concluída', color: 'success', icon: <CheckCircleIcon /> },
-    { value: 'cancelada', label: 'Cancelada', color: 'error', icon: <CancelIcon /> }
+    { value: 'aguardando_validacao', label: 'Aguardando Validação', color: 'secondary', icon: <ScheduleIcon /> },
+    { value: 'concluido', label: 'Concluído', color: 'success', icon: <CheckCircleIcon /> },
+    { value: 'cancelado', label: 'Cancelado', color: 'error', icon: <CancelIcon /> }
   ];
 
   const priorityOptions = [
@@ -117,8 +129,8 @@ const TaskList = ({ onNavigate }) => {
       });
 
       const response = await taskAPI.getTasks(params);
-      setTasks(response.data.tasks);
-      setPagination(response.data.pagination);
+      setTasks(response.data.data);
+      setPagination(response.data.meta.pagination);
     } catch (error) {
       setError('Erro ao carregar tarefas');
       console.error('Erro ao carregar tarefas:', error);
@@ -171,13 +183,36 @@ const TaskList = ({ onNavigate }) => {
   };
 
   const handleView = () => {
+    setViewingTask(selectedTask);
+    setTaskViewDialog(true);
     handleMenuClose();
-    onNavigate('task-details', { taskId: selectedTask.id });
   };
 
   const handleEdit = () => {
+    setEditingTask(selectedTask);
+    setTaskFormDialog(true);
     handleMenuClose();
-    onNavigate('task-form', { taskId: selectedTask.id });
+  };
+
+  const handleNewTask = () => {
+    setEditingTask(null);
+    setTaskFormDialog(true);
+  };
+
+  const handleTaskFormClose = () => {
+    setTaskFormDialog(false);
+    setEditingTask(null);
+  };
+
+  const handleTaskViewClose = () => {
+    setTaskViewDialog(false);
+    setViewingTask(null);
+  };
+
+  const handleTaskSaved = () => {
+    // Recarregar lista de tarefas
+    loadTasks(pagination?.current_page || 1, search, filters);
+    handleTaskFormClose();
   };
 
   const handleDeleteOpen = () => {
@@ -194,13 +229,35 @@ const TaskList = ({ onNavigate }) => {
     try {
       setActionLoading(true);
       await taskAPI.deleteTask(selectedTask.id);
-      await loadTasks(pagination.current_page, search, filters);
+      await loadTasks(pagination?.current_page || 1, search, filters);
       handleDeleteClose();
     } catch (error) {
       setError('Erro ao excluir tarefa');
       console.error('Erro ao excluir tarefa:', error);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // Função para atualizar status da tarefa
+  const handleStatusChange = async (task, field, newValue) => {
+    try {
+      setStatusUpdateLoading(task.id);
+      
+      // Preparar dados de atualização
+      const updateData = { [field]: newValue };
+      
+      // Fazer update da tarefa
+      await taskAPI.updateTask(task.id, updateData);
+      
+      // Recarregar a lista mantendo os filtros atuais
+      await loadTasks(pagination?.current_page || 1, search, filters);
+      
+    } catch (error) {
+      setError(`Erro ao atualizar ${field} da tarefa`);
+      console.error(`Erro ao atualizar ${field} da tarefa:`, error);
+    } finally {
+      setStatusUpdateLoading(null);
     }
   };
 
@@ -228,33 +285,15 @@ const TaskList = ({ onNavigate }) => {
     { label: 'Tarefas', onClick: () => onNavigate('tasks') }
   ];
 
-  const headerActions = (
-    <Stack direction="row" spacing={1}>
-      <Button
-        variant="outlined"
-        startIcon={<FilterIcon />}
-        onClick={() => alert('Filtros expandidos em breve')}
-        sx={{ display: { xs: 'none', sm: 'flex' } }}
-      >
-        Filtros
-      </Button>
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={() => onNavigate('task-form')}
-      >
-        Nova Tarefa
-      </Button>
-    </Stack>
-  );
+  const headerActions = null; // Remove ações do header
 
   // Calculate stats
   const stats = {
-    total: pagination.total_records,
-    pendente: tasks.filter(t => t.status === 'pendente').length,
+    total: pagination?.total_records || 0,
+    novo: tasks.filter(t => t.status === 'novo').length,
     em_progresso: tasks.filter(t => t.status === 'em_progresso').length,
-    concluida: tasks.filter(t => t.status === 'concluida').length,
-    overdue: tasks.filter(t => isOverdue(t.due_date) && t.status !== 'concluida').length
+    concluido: tasks.filter(t => t.status === 'concluido').length,
+    overdue: tasks.filter(t => isOverdue(t.due_date) && t.status !== 'concluido').length
   };
 
   return (
@@ -266,18 +305,51 @@ const TaskList = ({ onNavigate }) => {
       headerActions={headerActions}
     >
       {/* Stats Summary */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.light' }}>
-                <TaskIcon color="primary" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <TaskIcon sx={{ color: '#666', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
                   {stats.total}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
                   Total de Tarefas
                 </Typography>
               </Box>
@@ -286,17 +358,50 @@ const TaskList = ({ onNavigate }) => {
         </Grid>
         
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'warning.light' }}>
-                <ScheduleIcon color="warning" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <ScheduleIcon sx={{ color: '#f57c00', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
-                  {stats.pendente}
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
+                  {stats.novo}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Pendentes
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
+                  Novas
                 </Typography>
               </Box>
             </Box>
@@ -304,16 +409,49 @@ const TaskList = ({ onNavigate }) => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'info.light' }}>
-                <PlayArrowIcon color="info" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <PlayArrowIcon sx={{ color: '#2196f3', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
                   {stats.em_progresso}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
                   Em Progresso
                 </Typography>
               </Box>
@@ -322,16 +460,49 @@ const TaskList = ({ onNavigate }) => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', p: 2 }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+              border: '1px solid #e0e0e0', 
+              borderRadius: 3,
+              p: 3,
+              height: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'error.light' }}>
-                <FlagIcon color="error" />
-              </Avatar>
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                bgcolor: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FlagIcon sx={{ color: '#f44336', fontSize: 20 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    color: '#000',
+                    mb: 0.5
+                  }}
+                >
                   {stats.overdue}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    color: '#999'
+                  }}
+                >
                   Atrasadas
                 </Typography>
               </Box>
@@ -340,10 +511,69 @@ const TaskList = ({ onNavigate }) => {
         </Grid>
       </Grid>
 
-      {/* Search and Filters */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 3 }}>
+      {/* Action Buttons */}
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3,
+          mb: 4 
+        }}
+      >
         <Box sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontSize: '0.875rem',
+              color: '#666',
+              fontWeight: 400,
+              mb: 3
+            }}
+          >
+            Ações Rápidas
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNewTask}
+              sx={{
+                bgcolor: '#000',
+                color: 'white',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                '&:hover': {
+                  bgcolor: '#333'
+                }
+              }}
+            >
+              Nova Tarefa
+            </Button>
+          </Stack>
+        </Box>
+      </Card>
+
+      {/* Search and Filters */}
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3,
+          mb: 4 
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontSize: '0.875rem',
+              color: '#666',
+              fontWeight: 400,
+              mb: 3
+            }}
+          >
             Buscar e Filtrar Tarefas
           </Typography>
           
@@ -354,15 +584,44 @@ const TaskList = ({ onNavigate }) => {
               placeholder="Buscar por título ou descrição..."
               value={search}
               onChange={handleSearchChange}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  fontSize: '0.875rem',
+                  '& fieldset': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#666'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#000'
+                  }
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <Button type="submit" variant="contained" size="small">
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      size="small"
+                      sx={{
+                        bgcolor: '#000',
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        '&:hover': {
+                          bgcolor: '#333'
+                        }
+                      }}
+                    >
                       Buscar
                     </Button>
                   </InputAdornment>
@@ -449,17 +708,77 @@ const TaskList = ({ onNavigate }) => {
       )}
 
       {/* Tasks Table */}
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: '1px solid #e0e0e0', 
+          borderRadius: 3
+        }}
+      >
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Tarefa</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Prioridade</TableCell>
-                <TableCell>Responsável</TableCell>
-                <TableCell>Prazo</TableCell>
-                <TableCell align="center">Ações</TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Tarefa
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Status
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Prioridade
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Responsável
+                </TableCell>
+                <TableCell sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Prazo
+                </TableCell>
+                <TableCell align="center" sx={{ 
+                  fontSize: '0.75rem', 
+                  color: '#999', 
+                  fontWeight: 400, 
+                  borderBottom: '1px solid #f0f0f0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Ações
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -484,7 +803,7 @@ const TaskList = ({ onNavigate }) => {
                   const overdue = isOverdue(task.due_date);
 
                   return (
-                    <TableRow key={task.id} hover>
+                    <TableRow key={task.id} hover sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar sx={{ bgcolor: `${statusConfig.color}.light`, width: 32, height: 32 }}>
@@ -502,18 +821,23 @@ const TaskList = ({ onNavigate }) => {
                       </TableCell>
                       
                       <TableCell>
-                        <Chip
-                          label={statusConfig.label}
-                          color={statusConfig.color}
+                        <EditableStatus
+                          value={task.status}
+                          onChange={(newValue) => handleStatusChange(task, 'status', newValue)}
+                          options={statusOptions}
+                          loading={statusUpdateLoading === task.id}
+                          statusType="task_status"
                           size="small"
-                          icon={statusConfig.icon}
                         />
                       </TableCell>
                       
                       <TableCell>
-                        <Chip
-                          label={priorityConfig.label}
-                          color={priorityConfig.color}
+                        <EditableStatus
+                          value={task.priority}
+                          onChange={(newValue) => handleStatusChange(task, 'priority', newValue)}
+                          options={priorityOptions}
+                          loading={statusUpdateLoading === task.id}
+                          statusType="task_priority"
                           size="small"
                           variant="outlined"
                         />
@@ -566,11 +890,11 @@ const TaskList = ({ onNavigate }) => {
         </TableContainer>
 
         {/* Pagination */}
-        {pagination.total_pages > 1 && (
+        {(pagination?.total_pages || 0) > 1 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <Pagination
-              count={pagination.total_pages}
-              page={pagination.current_page}
+              count={pagination?.total_pages || 1}
+              page={pagination?.current_page || 1}
               onChange={handlePageChange}
               color="primary"
             />
@@ -617,6 +941,54 @@ const TaskList = ({ onNavigate }) => {
             {actionLoading ? <CircularProgress size={20} /> : 'Excluir'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Task Form Modal */}
+      <Dialog 
+        open={taskFormDialog} 
+        onClose={handleTaskFormClose} 
+        maxWidth="lg" 
+        fullWidth
+        fullScreen={false}
+      >
+        <DialogTitle>
+          {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <TaskFormModal
+            task={editingTask}
+            onSave={handleTaskSaved}
+            onCancel={handleTaskFormClose}
+            loading={taskFormLoading}
+            setLoading={setTaskFormLoading}
+            setError={setError}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Task View Modal */}
+      <Dialog 
+        open={taskViewDialog} 
+        onClose={handleTaskViewClose} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          Detalhes da Tarefa
+        </DialogTitle>
+        <DialogContent>
+          {viewingTask && (
+            <TaskViewModal
+              task={viewingTask}
+              onEdit={() => {
+                handleTaskViewClose();
+                setEditingTask(viewingTask);
+                setTaskFormDialog(true);
+              }}
+              onClose={handleTaskViewClose}
+            />
+          )}
+        </DialogContent>
       </Dialog>
     </MainLayout>
   );

@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param } = require('express-validator');
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth-simple');
 const { canManageClients } = require('../middleware/authorize');
 const serviceController = require('../controllers/serviceController');
 

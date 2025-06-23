@@ -39,20 +39,21 @@ CREATE TABLE IF NOT EXISTS clients (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
--- Tabela de Serviços/Produtos
-CREATE TABLE IF NOT EXISTS services (
+-- Tabela de Serviços/Produtos (renomeada para products)
+CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     name TEXT NOT NULL,
     description TEXT,
     category TEXT,
-    base_price REAL,
-    service_type TEXT DEFAULT 'avulso' CHECK (service_type IN ('recorrente', 'avulso', 'personalizado')),
-    estimated_hours INTEGER,
-    is_active INTEGER DEFAULT 1,
+    tags TEXT, -- Armazenado como JSON ou string separada por vírgulas
+    average_ticket REAL DEFAULT 0,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
     created_by TEXT REFERENCES users(id),
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Manter compatibilidade com services (view) - será criada depois dos dados
 
 -- Tabela de Histórico de Compras dos Clientes
 CREATE TABLE IF NOT EXISTS client_purchases (
@@ -107,15 +108,53 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT,
     client_id TEXT REFERENCES clients(id),
     project_id TEXT REFERENCES projects(id),
-    service_id TEXT REFERENCES services(id), -- Nova referência para serviços
+    product_id TEXT REFERENCES products(id), -- Referência para produtos
     assigned_to TEXT NOT NULL REFERENCES users(id),
     created_by TEXT NOT NULL REFERENCES users(id),
     priority TEXT DEFAULT 'media' CHECK (priority IN ('baixa', 'media', 'alta', 'urgente')),
-    status TEXT DEFAULT 'pendente' CHECK (status IN ('pendente', 'em_progresso', 'concluida', 'cancelada')),
+    status TEXT DEFAULT 'novo' CHECK (status IN ('novo', 'em_progresso', 'aguardando_validacao', 'concluido', 'cancelado')),
     due_date TEXT,
     completed_at TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tabela de Comentários de Tarefas
+CREATE TABLE IF NOT EXISTS task_comments (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    comment TEXT NOT NULL,
+    is_internal INTEGER DEFAULT 0, -- 0 = público, 1 = interno (apenas equipe)
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tabela de Histórico de Tarefas
+CREATE TABLE IF NOT EXISTS task_history (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    action TEXT NOT NULL, -- 'created', 'updated', 'status_changed', 'assigned', 'commented'
+    field_name TEXT, -- nome do campo alterado
+    old_value TEXT, -- valor anterior
+    new_value TEXT, -- novo valor
+    description TEXT, -- descrição da alteração
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tabela de Anexos de Tarefas
+CREATE TABLE IF NOT EXISTS task_attachments (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    filename TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
 );
 
 -- Tabela de Categorias Financeiras
@@ -181,18 +220,86 @@ INSERT OR IGNORE INTO payment_methods (id, name, description, is_active, created
 ('pix', 'PIX', 'Transferência via PIX', 1, 'system', datetime('now')),
 ('transferencia', 'Transferência', 'Transferência bancária', 1, 'system', datetime('now'));
 
--- Inserção de dados iniciais para serviços
-INSERT OR IGNORE INTO services (id, name, description, category, base_price, service_type, estimated_hours, is_active, created_by, created_at) VALUES
-('marketing-digital', 'Marketing Digital', 'Gestão completa de redes sociais e campanhas digitais', 'Marketing', 2500.00, 'recorrente', 40, 1, 'system', datetime('now')),
-('desenvolvimento-web', 'Desenvolvimento Web', 'Criação e desenvolvimento de sites e sistemas web', 'Tecnologia', 8500.00, 'personalizado', 120, 1, 'system', datetime('now')),
-('consultoria-empresarial', 'Consultoria Empresarial', 'Consultoria estratégica para crescimento empresarial', 'Consultoria', 3500.00, 'avulso', 20, 1, 'system', datetime('now')),
-('design-grafico', 'Design Gráfico', 'Criação de identidade visual e materiais gráficos', 'Design', 1800.00, 'avulso', 30, 1, 'system', datetime('now')),
-('seo-otimizacao', 'SEO e Otimização', 'Otimização de sites para mecanismos de busca', 'Marketing', 1500.00, 'recorrente', 25, 1, 'system', datetime('now')),
-('manutencao-sistemas', 'Manutenção de Sistemas', 'Manutenção e suporte técnico de sistemas', 'Tecnologia', 800.00, 'recorrente', 10, 1, 'system', datetime('now'));
+-- SISTEMA DE FOLLOW-UP
+
+-- Tabela de Cadências de Follow-up
+CREATE TABLE IF NOT EXISTS followup_sequences (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_by TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tabela de Passos da Cadência
+CREATE TABLE IF NOT EXISTS followup_steps (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    sequence_id TEXT NOT NULL REFERENCES followup_sequences(id) ON DELETE CASCADE,
+    step_order INTEGER NOT NULL, -- Ordem do passo (1, 2, 3...)
+    day_offset INTEGER NOT NULL, -- Dias após início da cadência
+    interaction_type TEXT NOT NULL CHECK (interaction_type IN ('ligacao', 'email', 'whatsapp', 'reuniao', 'outro')),
+    title TEXT NOT NULL,
+    notes TEXT, -- Roteiro/observações para o follow-up
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(sequence_id, step_order),
+    UNIQUE(sequence_id, day_offset)
+);
+
+-- Tabela de Atribuições de Cadência a Clientes
+CREATE TABLE IF NOT EXISTS client_followup_assignments (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    sequence_id TEXT NOT NULL REFERENCES followup_sequences(id),
+    assigned_by TEXT NOT NULL REFERENCES users(id),
+    responsible_user TEXT NOT NULL REFERENCES users(id), -- Quem será responsável pelos follow-ups
+    start_date TEXT NOT NULL,
+    current_step INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed', 'cancelled')),
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(client_id) -- Um cliente só pode ter uma cadência ativa por vez
+);
+
+-- Tabela de Follow-ups Individuais
+CREATE TABLE IF NOT EXISTS followups (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    assignment_id TEXT NOT NULL REFERENCES client_followup_assignments(id) ON DELETE CASCADE,
+    step_id TEXT NOT NULL REFERENCES followup_steps(id),
+    client_id TEXT NOT NULL REFERENCES clients(id),
+    responsible_user TEXT NOT NULL REFERENCES users(id),
+    scheduled_date TEXT NOT NULL,
+    interaction_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    notes TEXT,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'skipped', 'overdue')),
+    completed_at TEXT,
+    completion_notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Dados iniciais serão inseridos pelo script de setup
 
 -- Índices para melhor performance
 CREATE INDEX IF NOT EXISTS idx_clients_document ON clients(document);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_comments_user_id ON task_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_history_task_id ON task_history(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_history_user_id ON task_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_history_action ON task_history(action);
+CREATE INDEX IF NOT EXISTS idx_task_attachments_task_id ON task_attachments(task_id);
 CREATE INDEX IF NOT EXISTS idx_finance_transactions_type ON finance_transactions(type);
 CREATE INDEX IF NOT EXISTS idx_finance_transactions_date ON finance_transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_followup_sequences_active ON followup_sequences(is_active);
+CREATE INDEX IF NOT EXISTS idx_followup_steps_sequence ON followup_steps(sequence_id, step_order);
+CREATE INDEX IF NOT EXISTS idx_client_followup_assignments_client ON client_followup_assignments(client_id);
+CREATE INDEX IF NOT EXISTS idx_client_followup_assignments_status ON client_followup_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_followups_responsible ON followups(responsible_user, status);
+CREATE INDEX IF NOT EXISTS idx_followups_scheduled_date ON followups(scheduled_date);

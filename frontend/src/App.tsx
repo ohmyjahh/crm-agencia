@@ -11,6 +11,8 @@ import ClientForm from './components/clients/ClientForm';
 import TaskList from './components/tasks/TaskList';
 import TaskForm from './components/tasks/TaskForm';
 import FinanceDashboard from './components/finance/FinanceDashboard';
+import ProductList from './components/products/ProductList';
+import FollowupDashboard from './components/followup/FollowupDashboard';
 import { CircularProgress, Box } from '@mui/material';
 
 function AppContent() {
@@ -85,6 +87,12 @@ function AppContent() {
             <button onClick={() => handleNavigate('tasks')}>Voltar</button>
           </Box>
         );
+      
+      case 'products':
+        return <ProductList onNavigate={handleNavigate} />;
+      
+      case 'followup':
+        return <FollowupDashboard onNavigate={handleNavigate} />;
       
       case 'finance':
         return <FinanceDashboard onNavigate={handleNavigate} />;

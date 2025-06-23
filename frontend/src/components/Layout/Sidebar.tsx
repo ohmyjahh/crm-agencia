@@ -21,11 +21,21 @@ import {
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
   TrendingUp as TrendingUpIcon,
+  Inventory as ProductIcon,
+  CallMade as FollowupIcon,
+  MailOutline as EmailIcon,
+  AnalyticsOutlined as AnalyticsIcon,
+  IntegrationInstructionsOutlined as IntegrationIcon,
+  SpeedOutlined as PerformanceIcon,
+  PersonOutline as AccountIcon,
+  GroupOutlined as MembersIcon,
+  FeedbackOutlined as FeedbackIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_WIDTH = 260;
 
 interface SidebarProps {
   currentPage: string;
@@ -37,7 +47,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, onMobileToggle }) => {
   const { user, logout } = useAuth();
 
-  const menuItems = [
+  const mainMenuItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -53,11 +63,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, 
       color: '#2e7d32'
     },
     {
+      id: 'followup',
+      label: 'Follow-up',
+      icon: <FollowupIcon />,
+      path: 'followup',
+      color: '#7b1fa2'
+    },
+    {
       id: 'tasks',
       label: 'Tarefas',
       icon: <TaskIcon />,
       path: 'tasks',
       color: '#ed6c02'
+    },
+    {
+      id: 'products',
+      label: 'Produtos',
+      icon: <ProductIcon />,
+      path: 'products',
+      color: '#1565c0'
     },
     {
       id: 'finance',
@@ -68,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, 
     },
   ];
 
-  const bottomMenuItems = [
+  const otherMenuItems = [
     {
       id: 'settings',
       label: 'Configurações',
@@ -84,73 +108,108 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, 
 
   const sidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      {/* Header */}
-      <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+      {/* Header - Following exact style from image */}
+      <Box sx={{ p: 3, borderBottom: '1px solid #f0f0f0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
           <Box sx={{ 
-            width: 36, 
-            height: 36, 
-            borderRadius: 2, 
-            bgcolor: 'primary.main',
+            width: 28, 
+            height: 28, 
+            borderRadius: 1.5, 
+            bgcolor: '#4caf50',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <BusinessIcon sx={{ fontSize: 20, color: 'white' }} />
+            <Box sx={{ 
+              width: 12, 
+              height: 12, 
+              bgcolor: 'white',
+              borderRadius: '50%'
+            }} />
           </Box>
-          <Typography variant="h6" fontWeight="bold" color="text.primary">
-            CRM Agency
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600, 
+              color: '#000',
+              fontSize: '1.1rem'
+            }}
+          >
+            SplitEdge
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: 'grey.100', color: 'text.primary', width: 32, height: 32 }}>
-            {user?.name?.charAt(0) || 'U'}
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" fontWeight="medium" noWrap>
-              {user?.name || 'Usuário'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {user?.role === 'administrador' ? 'Administrador' : 'Funcionário'}
-            </Typography>
-          </Box>
+        {/* Search bar - Following exact style from image */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          bgcolor: '#f8f9fa',
+          borderRadius: 2,
+          px: 2,
+          py: 1,
+          gap: 1
+        }}>
+          <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+          <Typography sx={{ 
+            fontSize: '0.875rem', 
+            color: '#999',
+            flex: 1
+          }}>
+            Buscar
+          </Typography>
         </Box>
       </Box>
 
       {/* Menu Principal */}
       <Box sx={{ flex: 1, py: 2 }}>
+        {/* Main Menu Section */}
         <Box sx={{ px: 2, mb: 2 }}>
-          <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-            Workspace
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: '#999', 
+              fontWeight: 500, 
+              fontSize: '0.75rem',
+              textTransform: 'uppercase', 
+              letterSpacing: 1,
+              pl: 2
+            }}
+          >
+            MENU PRINCIPAL
           </Typography>
         </Box>
         
         <List sx={{ px: 2 }}>
-          {menuItems.map((item) => (
-            <ListItem key={item.id} disablePadding sx={{ mb: 1 }}>
+          {mainMenuItems.map((item) => (
+            <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 onClick={() => onNavigate(item.path)}
                 selected={currentPage === item.id || currentPage === item.path}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 2,
                   py: 1.5,
+                  minHeight: 44,
                   '&.Mui-selected': {
-                    bgcolor: 'primary.main',
+                    bgcolor: '#4caf50',
                     color: 'white',
                     '& .MuiListItemIcon-root': {
                       color: 'white',
                     },
                     '&:hover': {
-                      bgcolor: 'primary.dark',
+                      bgcolor: '#45a049',
                     },
                   },
                   '&:hover': {
-                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.100',
+                    bgcolor: '#f5f5f5',
                   },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36 }}>
+                <ListItemIcon sx={{ 
+                  minWidth: 36,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 20
+                  }
+                }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
@@ -165,74 +224,140 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, 
           ))}
         </List>
 
-        {/* Theme Toggle Card */}
-        <Box sx={{ 
-          mx: 3, 
-          mt: 4, 
-          p: 3, 
-          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.50', 
-          borderRadius: 3,
-          border: 1,
-          borderColor: 'divider'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="subtitle2" fontWeight="600">
-              Aparência
-            </Typography>
-            <ThemeToggle variant="switch" />
-          </Box>
-          <Typography variant="caption" color="text.secondary">
-            Altere o tema entre claro e escuro
+        {/* Other Section */}
+        <Box sx={{ px: 2, mb: 2, mt: 3 }}>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: '#999', 
+              fontWeight: 500, 
+              fontSize: '0.75rem',
+              textTransform: 'uppercase', 
+              letterSpacing: 1,
+              pl: 2
+            }}
+          >
+            OUTROS
           </Typography>
         </Box>
-      </Box>
-
-      {/* Bottom Menu */}
-      <Box sx={{ px: 1, pb: 2 }}>
-        <Divider sx={{ mb: 1 }} />
-        <List>
-          {bottomMenuItems.map((item) => (
-            <ListItem key={item.id} disablePadding>
+        
+        <List sx={{ px: 2 }}>
+          {otherMenuItems.map((item) => (
+            <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 onClick={() => onNavigate(item.path)}
-                selected={currentPage === item.id}
+                selected={currentPage === item.id || currentPage === item.path}
                 sx={{
                   borderRadius: 2,
-                  mx: 1,
+                  py: 1.5,
+                  minHeight: 44,
                   '&.Mui-selected': {
-                    bgcolor: `${item.color}15`,
-                    color: item.color,
+                    bgcolor: '#4caf50',
+                    color: 'white',
+                    '& .MuiListItemIcon-root': {
+                      color: 'white',
+                    },
+                    '&:hover': {
+                      bgcolor: '#45a049',
+                    },
+                  },
+                  '&:hover': {
+                    bgcolor: '#f5f5f5',
                   },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
+                <ListItemIcon sx={{ 
+                  minWidth: 36,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 20
+                  }
+                }}>
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText primary={item.label} />
+                <ListItemText 
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                  }}
+                />
               </ListItemButton>
             </ListItem>
           ))}
-          
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={handleLogout}
-              sx={{
-                borderRadius: 2,
-                mx: 1,
-                color: 'error.main',
-                '&:hover': {
-                  bgcolor: 'error.light',
-                  color: 'error.contrastText',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                <LogoutIcon color="error" />
-              </ListItemIcon>
-              <ListItemText primary="Sair" />
-            </ListItemButton>
-          </ListItem>
         </List>
+
+      </Box>
+
+      {/* Bottom User Section - Following exact style from image */}
+      <Box sx={{ p: 3, borderTop: '1px solid #f0f0f0' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar 
+            sx={{ 
+              width: 32, 
+              height: 32, 
+              bgcolor: '#4caf50',
+              fontSize: '0.875rem',
+              fontWeight: 600
+            }}
+          >
+            {user?.name?.charAt(0) || 'J'}
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 500, 
+                fontSize: '0.875rem',
+                color: '#000'
+              }}
+              noWrap
+            >
+              Jevine klef
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#999',
+                fontSize: '0.75rem'
+              }}
+              noWrap
+            >
+              {user?.email || 'user@example.com'}
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            width: 24, 
+            height: 24, 
+            borderRadius: '50%',
+            bgcolor: '#f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}>
+            <Box sx={{ 
+              width: 4, 
+              height: 4, 
+              bgcolor: '#999', 
+              borderRadius: '50%',
+              position: 'relative',
+              '&::before, &::after': {
+                content: '""',
+                position: 'absolute',
+                width: 4,
+                height: 4,
+                bgcolor: '#999',
+                borderRadius: '50%',
+              },
+              '&::before': {
+                top: -6
+              },
+              '&::after': {
+                top: 6
+              }
+            }} />
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -269,7 +394,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, 
             boxSizing: 'border-box',
             width: SIDEBAR_WIDTH,
             border: 'none',
-            boxShadow: 1,
+            borderRight: '1px solid #f0f0f0',
             position: 'relative',
             height: '100vh',
           },

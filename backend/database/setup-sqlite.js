@@ -44,6 +44,21 @@ async function setupSQLiteDatabase() {
     // Inserir dados de exemplo
     await insertSampleData();
     
+    // Inserir dados dos novos módulos
+    await insertProductsAndFollowupData();
+    
+    // Criar view de compatibilidade
+    await pool.query(`
+      CREATE VIEW IF NOT EXISTS services AS 
+      SELECT id, name, description, category, 
+             average_ticket as base_price, 
+             'avulso' as service_type,
+             NULL as estimated_hours,
+             CASE WHEN status = 'ativo' THEN 1 ELSE 0 END as is_active,
+             created_by, created_at, updated_at
+      FROM products
+    `);
+    
     console.log('✅ Dados iniciais inseridos!');
     console.log('\n🎉 Banco SQLite configurado com sucesso!');
     console.log('📧 Admin: admin@crm.com');
@@ -66,9 +81,9 @@ async function insertSampleData() {
   // Inserir tarefas de exemplo
   await pool.query(`
     INSERT OR IGNORE INTO tasks (title, description, client_id, assigned_to, created_by, priority, status, due_date) VALUES 
-    ('Follow-up com cliente ABC', 'Entrar em contato para proposta', 'client-1', 'admin-id-123', 'admin-id-123', 'alta', 'pendente', date('now', '+3 days')),
+    ('Follow-up com cliente ABC', 'Entrar em contato para proposta', 'client-1', 'admin-id-123', 'admin-id-123', 'alta', 'novo', date('now', '+3 days')),
     ('Criar apresentação XYZ', 'Preparar apresentação comercial', 'client-2', 'admin-id-123', 'admin-id-123', 'media', 'em_progresso', date('now', '+5 days')),
-    ('Reunião com João', 'Reunião para definir escopo', 'client-3', 'admin-id-123', 'admin-id-123', 'baixa', 'concluida', date('now', '-1 day'))
+    ('Reunião com João', 'Reunião para definir escopo', 'client-3', 'admin-id-123', 'admin-id-123', 'baixa', 'concluido', date('now', '-1 day'))
   `);
   
   // Inserir transações de exemplo
@@ -78,6 +93,44 @@ async function insertSampleData() {
     ('entrada', 8000.00, 'Consultoria XYZ', 'client-2', date('now', '-10 days'), 'admin-id-123'),
     ('saida', 2000.00, 'Aluguel escritório', NULL, date('now', '-2 days'), 'admin-id-123'),
     ('saida', 1500.00, 'Material de escritório', NULL, date('now', '-7 days'), 'admin-id-123')
+  `);
+}
+
+async function insertProductsAndFollowupData() {
+  // Inserir produtos de exemplo
+  await pool.query(`
+    INSERT OR IGNORE INTO products (id, name, description, category, tags, average_ticket, status, created_by) VALUES 
+    ('marketing-digital', 'Marketing Digital', 'Gestão completa de redes sociais e campanhas digitais', 'Marketing', 'redes sociais,campanhas,digital', 2500.00, 'ativo', 'admin-id-123'),
+    ('desenvolvimento-web', 'Desenvolvimento Web', 'Criação e desenvolvimento de sites e sistemas web', 'Tecnologia', 'websites,sistemas,desenvolvimento', 8500.00, 'ativo', 'admin-id-123'),
+    ('consultoria-empresarial', 'Consultoria Empresarial', 'Consultoria estratégica para crescimento empresarial', 'Consultoria', 'estratégia,crescimento,consultoria', 3500.00, 'ativo', 'admin-id-123'),
+    ('design-grafico', 'Design Gráfico', 'Criação de identidade visual e materiais gráficos', 'Design', 'identidade visual,gráfico,criação', 1800.00, 'ativo', 'admin-id-123'),
+    ('seo-otimizacao', 'SEO e Otimização', 'Otimização de sites para mecanismos de busca', 'Marketing', 'seo,otimização,busca', 1500.00, 'ativo', 'admin-id-123'),
+    ('manutencao-sistemas', 'Manutenção de Sistemas', 'Manutenção e suporte técnico de sistemas', 'Tecnologia', 'manutenção,suporte,sistemas', 800.00, 'ativo', 'admin-id-123')
+  `);
+  
+  // Inserir cadências de exemplo
+  await pool.query(`
+    INSERT OR IGNORE INTO followup_sequences (id, name, description, created_by) VALUES 
+    ('seq-prospect-inicial', 'Cadência Prospect Inicial', 'Cadência padrão para novos prospects', 'admin-id-123'),
+    ('seq-pos-reuniao', 'Pós-Reunião', 'Follow-up após primeira reunião comercial', 'admin-id-123')
+  `);
+  
+  // Inserir passos da cadência inicial
+  await pool.query(`
+    INSERT OR IGNORE INTO followup_steps (sequence_id, step_order, day_offset, interaction_type, title, notes) VALUES 
+    ('seq-prospect-inicial', 1, 0, 'ligacao', 'Primeira ligação', 'Apresentar a empresa e verificar interesse'),
+    ('seq-prospect-inicial', 2, 3, 'email', 'Email com materiais', 'Enviar portfólio e casos de sucesso'),
+    ('seq-prospect-inicial', 3, 7, 'whatsapp', 'Follow-up WhatsApp', 'Mensagem perguntando se recebeu os materiais'),
+    ('seq-prospect-inicial', 4, 14, 'ligacao', 'Segunda ligação', 'Propor reunião para apresentação detalhada')
+  `);
+  
+  // Inserir passos da cadência pós-reunião
+  await pool.query(`
+    INSERT OR IGNORE INTO followup_steps (sequence_id, step_order, day_offset, interaction_type, title, notes) VALUES 
+    ('seq-pos-reuniao', 1, 1, 'email', 'Email pós-reunião', 'Agradecer reunião e enviar proposta'),
+    ('seq-pos-reuniao', 2, 5, 'ligacao', 'Follow-up proposta', 'Ligar para tirar dúvidas sobre a proposta'),
+    ('seq-pos-reuniao', 3, 10, 'whatsapp', 'Lembrete WhatsApp', 'Lembrar da proposta enviada'),
+    ('seq-pos-reuniao', 4, 15, 'ligacao', 'Última tentativa', 'Última tentativa antes de considerar perdido')
   `);
 }
 

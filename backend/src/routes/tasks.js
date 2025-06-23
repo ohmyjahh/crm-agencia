@@ -1,7 +1,14 @@
 const express = require('express');
 const { body, param } = require('express-validator');
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth-simple');
 const { canManageTasks, requireAdmin } = require('../middleware/authorize');
+const { uploadTaskSingle, handleTaskUploadError } = require('../middleware/taskUpload');
+// const { 
+//   standardLimiter, 
+//   // uploadLimiter, 
+//   heavyOperationsLimiter,
+//   burstLimiter 
+// } = require('../middleware/rateLimit');
 const taskController = require('../controllers/taskController');
 
 const router = express.Router();
@@ -33,8 +40,8 @@ const taskValidation = [
     .withMessage('Prioridade deve ser: baixa, media, alta ou urgente'),
   body('status')
     .optional()
-    .isIn(['pendente', 'em_progresso', 'concluida', 'cancelada'])
-    .withMessage('Status deve ser: pendente, em_progresso, concluida ou cancelada'),
+    .isIn(['novo', 'em_progresso', 'aguardando_validacao', 'concluido', 'cancelado'])
+    .withMessage('Status deve ser: novo, em_progresso, aguardando_validacao, concluido ou cancelado'),
   body('due_date')
     .optional({ nullable: true, checkFalsy: true })
     .isISO8601()
@@ -54,8 +61,35 @@ const taskIdValidation = [
     .withMessage('ID da tarefa é obrigatório')
 ];
 
-// Aplicar autenticação a todas as rotas
+// Validação para taskId em parâmetros
+const taskIdParamValidation = [
+  param('taskId')
+    .notEmpty()
+    .withMessage('ID da tarefa é obrigatório')
+];
+
+// Validação para comentários
+const commentValidation = [
+  body('comment')
+    .trim()
+    .isLength({ min: 1, max: 1000 })
+    .withMessage('Comentário deve ter entre 1 e 1000 caracteres'),
+  body('is_internal')
+    .optional()
+    .isBoolean()
+    .withMessage('is_internal deve ser um valor booleano')
+];
+
+// Validação para status update
+const statusUpdateValidation = [
+  body('status')
+    .isIn(['novo', 'em_progresso', 'aguardando_validacao', 'concluido', 'cancelado'])
+    .withMessage('Status deve ser: novo, em_progresso, aguardando_validacao, concluido ou cancelado')
+];
+
+// Aplicar autenticação e rate limiting básico a todas as rotas
 router.use(authenticateToken);
+// router.use(standardLimiter);
 
 // Rotas públicas para funcionários
 router.get('/', canManageTasks, taskController.getTasks);
@@ -69,5 +103,53 @@ router.put('/:id', [...taskIdValidation, ...taskValidation], canManageTasks, tas
 
 // Rota administrativa (só admin pode deletar)
 router.delete('/:id', taskIdValidation, requireAdmin, taskController.deleteTask);
+
+// Rotas para comentários
+router.post('/:taskId/comments', [...taskIdParamValidation, ...commentValidation], canManageTasks, taskController.addComment);
+router.get('/:taskId/comments', taskIdParamValidation, canManageTasks, taskController.getTaskComments);
+
+// Rotas para histórico
+router.get('/:taskId/history', taskIdParamValidation, canManageTasks, taskController.getTaskHistory);
+
+// Rota para atualização de status (método simplificado)
+router.patch('/:taskId/status', [...taskIdParamValidation, ...statusUpdateValidation], canManageTasks, taskController.updateTaskStatus);
+
+// Rotas para anexos
+router.post('/:taskId/attachments', 
+  // uploadLimiter,
+  taskIdParamValidation, 
+  canManageTasks, 
+  uploadTaskSingle, 
+  handleTaskUploadError, 
+  taskController.uploadTaskAttachment
+);
+
+router.get('/:taskId/attachments', 
+  taskIdParamValidation, 
+  canManageTasks, 
+  taskController.getTaskAttachments
+);
+
+router.get('/:taskId/attachments/:attachmentId/download', 
+  [
+    ...taskIdParamValidation,
+    param('attachmentId').notEmpty().withMessage('ID do anexo é obrigatório')
+  ], 
+  canManageTasks, 
+  taskController.downloadTaskAttachment
+);
+
+router.delete('/:taskId/attachments/:attachmentId', 
+  [
+    ...taskIdParamValidation,
+    param('attachmentId').notEmpty().withMessage('ID do anexo é obrigatório')
+  ], 
+  canManageTasks, 
+  taskController.deleteTaskAttachment
+);
+
+// Rotas para notificações
+router.get('/overdue', canManageTasks, taskController.getOverdueTasks);
+router.get('/upcoming', canManageTasks, taskController.getUpcomingTasks);
 
 module.exports = router;

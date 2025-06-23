@@ -10,6 +10,7 @@ import {
   Button,
   Avatar,
   Badge,
+  InputBase,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -17,6 +18,7 @@ import {
   Notifications as NotificationsIcon,
   Search as SearchIcon,
   Home as HomeIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { SIDEBAR_WIDTH } from './Sidebar';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -55,16 +57,15 @@ const Header: React.FC<HeaderProps> = ({
       position="sticky"
       sx={{
         width: '100%',
-        bgcolor: 'background.paper',
-        color: 'text.primary',
-        boxShadow: 1,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
+        bgcolor: 'white',
+        color: '#000',
+        boxShadow: 'none',
+        borderBottom: '1px solid #f0f0f0',
         zIndex: (theme) => theme.zIndex.drawer - 1,
       }}
     >
-      <Toolbar sx={{ px: { xs: 2, md: 3 } }}>
-        {/* Menu/Back Button */}
+      <Toolbar sx={{ px: { xs: 2, md: 3 }, py: 2, minHeight: '72px !important' }}>
+        {/* Menu/Back Button - Hidden on desktop when sidebar is permanent */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {showBackButton ? (
             <IconButton
@@ -73,14 +74,16 @@ const Header: React.FC<HeaderProps> = ({
               onClick={onBack}
               sx={{ 
                 mr: 1,
-                bgcolor: 'primary.main',
+                bgcolor: '#4caf50',
                 color: 'white',
+                width: 36,
+                height: 36,
                 '&:hover': {
-                  bgcolor: 'primary.dark',
+                  bgcolor: '#45a049',
                 }
               }}
             >
-              <ArrowBackIcon />
+              <ArrowBackIcon sx={{ fontSize: 20 }} />
             </IconButton>
           ) : (
             <IconButton
@@ -88,9 +91,14 @@ const Header: React.FC<HeaderProps> = ({
               aria-label="abrir menu"
               onClick={onMenuToggle}
               edge="start"
-              sx={{ mr: 1, display: { md: 'none' } }}
+              sx={{ 
+                mr: 1, 
+                display: { md: 'none' },
+                width: 36,
+                height: 36
+              }}
             >
-              <MenuIcon />
+              <MenuIcon sx={{ fontSize: 20 }} />
             </IconButton>
           )}
         </Box>
@@ -102,9 +110,9 @@ const Header: React.FC<HeaderProps> = ({
               <Breadcrumbs 
                 aria-label="breadcrumb" 
                 sx={{ 
-                  mb: 0.5,
+                  mb: 1,
                   '& .MuiBreadcrumbs-separator': {
-                    color: 'text.secondary',
+                    color: '#999',
                   }
                 }}
               >
@@ -119,8 +127,10 @@ const Header: React.FC<HeaderProps> = ({
                     display: 'flex', 
                     alignItems: 'center',
                     textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    color: '#666',
                     '&:hover': {
-                      textDecoration: 'underline',
+                      color: '#000',
                     }
                   }}
                 >
@@ -131,7 +141,13 @@ const Header: React.FC<HeaderProps> = ({
                 {breadcrumbs.map((item, index) => (
                   <React.Fragment key={index}>
                     {index === breadcrumbs.length - 1 ? (
-                      <Typography color="text.primary" fontWeight="medium">
+                      <Typography 
+                        sx={{ 
+                          color: '#000', 
+                          fontWeight: 500,
+                          fontSize: '0.875rem'
+                        }}
+                      >
                         {item.label}
                       </Typography>
                     ) : (
@@ -144,8 +160,10 @@ const Header: React.FC<HeaderProps> = ({
                         }}
                         sx={{ 
                           textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          color: '#666',
                           '&:hover': {
-                            textDecoration: 'underline',
+                            color: '#000',
                           }
                         }}
                       >
@@ -156,38 +174,129 @@ const Header: React.FC<HeaderProps> = ({
                 ))}
               </Breadcrumbs>
               
-              <Typography variant="h5" fontWeight="bold" sx={{ mt: 0.5 }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: '1.5rem',
+                  color: '#000'
+                }}
+              >
                 {title}
               </Typography>
             </Box>
           ) : (
-            <Typography variant="h5" fontWeight="bold">
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#000'
+              }}
+            >
               {title}
             </Typography>
           )}
         </Box>
 
         {/* Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {actions}
-          
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
-          {/* Search */}
-          <IconButton color="inherit" sx={{ display: { xs: 'none', sm: 'flex' } }}>
-            <SearchIcon />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Search Bar - Following SplitEdge style */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center', 
+            bgcolor: '#f8f9fa',
+            borderRadius: 2,
+            px: 2,
+            py: 1,
+            minWidth: 300,
+            gap: 1
+          }}>
+            <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+            <InputBase
+              placeholder="Search..."
+              sx={{ 
+                fontSize: '0.875rem', 
+                color: '#666',
+                flex: 1,
+                '& .MuiInputBase-input': {
+                  padding: 0,
+                }
+              }}
+            />
+          </Box>
+
+          {/* Search Icon for mobile */}
+          <IconButton 
+            color="inherit" 
+            sx={{ 
+              display: { xs: 'flex', md: 'none' },
+              width: 36,
+              height: 36,
+              bgcolor: '#f8f9fa',
+              '&:hover': {
+                bgcolor: '#e9ecef',
+              }
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: '#666' }} />
+          </IconButton>
+
+          {/* Settings */}
+          <IconButton 
+            color="inherit"
+            sx={{
+              width: 36,
+              height: 36,
+              bgcolor: '#f8f9fa',
+              '&:hover': {
+                bgcolor: '#e9ecef',
+              }
+            }}
+          >
+            <SettingsIcon sx={{ fontSize: 18, color: '#666' }} />
           </IconButton>
 
           {/* Notifications */}
-          <IconButton color="inherit">
-            <Badge badgeContent={3} color="error">
-              <NotificationsIcon />
-            </Badge>
+          <IconButton 
+            color="inherit"
+            sx={{
+              width: 36,
+              height: 36,
+              bgcolor: '#f8f9fa',
+              position: 'relative',
+              '&:hover': {
+                bgcolor: '#e9ecef',
+              }
+            }}
+          >
+            <NotificationsIcon sx={{ fontSize: 18, color: '#666' }} />
+            <Box sx={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 8,
+              height: 8,
+              bgcolor: '#f44336',
+              borderRadius: '50%',
+              border: '1px solid white'
+            }} />
           </IconButton>
 
+          {/* Actions from props */}
+          {actions}
+
           {/* Profile */}
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+          <Avatar 
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              bgcolor: '#4caf50',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              ml: 1
+            }}
+          >
             U
           </Avatar>
         </Box>
